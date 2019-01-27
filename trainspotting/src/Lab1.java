@@ -1,7 +1,10 @@
 import TSim.*;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Semaphore;
 
 /*
   TODO: Implement train
@@ -25,11 +28,17 @@ public class Lab1 {
     SOUTHWEST_OF_SOUTH_STATION,SOUTH_STATION,SOUTH_OF_SOUTH_STATION
   }
 
+  enum SemaphoreName {
+    NORTH,EAST,WEST,SOUTH,PITSTOP,CROSSING
+  }
+
   private TSimInterface tsi;
 
   private List<Switch> switches = new ArrayList<>();
 
   private List<Sensor> sensors = new ArrayList<>();
+
+  private List<LabSemaphore> semaphores = new ArrayList<>();
 
 
   public Lab1(int speed1, int speed2) {
@@ -57,6 +66,13 @@ public class Lab1 {
     sensors.add(new Sensor(16,11,SensorName.SOUTH_STATION));
     sensors.add(new Sensor(16,13,SensorName.SOUTH_OF_SOUTH_STATION));
 
+    semaphores.add(new LabSemaphore(SemaphoreName.CROSSING,1));
+    semaphores.add(new LabSemaphore(SemaphoreName.NORTH,1));
+    semaphores.add(new LabSemaphore(SemaphoreName.SOUTH,1));
+    semaphores.add(new LabSemaphore(SemaphoreName.PITSTOP,1));
+    semaphores.add(new LabSemaphore(SemaphoreName.EAST,1));
+    semaphores.add(new LabSemaphore(SemaphoreName.WEST,1));
+
   }
 
   class Switch {
@@ -83,6 +99,16 @@ public class Lab1 {
     }
   }
 
+  class LabSemaphore {
+    SemaphoreName semaphoreName;
+    Semaphore semaphore;
+
+    LabSemaphore (SemaphoreName semaphoreName, int permits) {
+      this.semaphoreName = semaphoreName;
+      this.semaphore = new Semaphore(permits);
+    }
+  }
+
   // TODO: Implement a representation of the train
   class Train extends Thread {
     boolean forward;
@@ -90,6 +116,7 @@ public class Lab1 {
     int id;
     TSimInterface tsi;
     int maxVelocity;
+    Semaphore semaphore;
 
     Train(int id, int startVelocity, TSimInterface tsi) {
       this.id = id;
@@ -127,7 +154,7 @@ public class Lab1 {
       }
     }
 
-    private void changeDirection() throws CommandException {
+    private void changeDirection() {
       forward = !forward;
     }
 
@@ -147,6 +174,56 @@ public class Lab1 {
         System.exit(1);
       }
     }
+
+    private void setSwitch(SwitchName switchName, int direction) throws CommandException {
+      Switch s = getSwitch(switchName);
+      tsi.setSwitch(s.x,s.y,direction);
+    }
+
+    private Switch getSwitch(SwitchName switchName) {
+      for (Switch s : switches) {
+        if (s.switchName == switchName) {
+          return s;
+        }
+      }
+      return null;
+    }
+
+    private Semaphore getSemaphore(SemaphoreName name) {
+      for (LabSemaphore s : semaphores) {
+        if (s.semaphoreName == name) {
+          return s.semaphore;
+        }
+      }
+      return null;
+    }
+
+    private void stopUntilPass(SemaphoreName semaphoreName) throws CommandException, InterruptedException {
+      Semaphore semaphore = getSemaphore(semaphoreName);
+      activateBreak();
+      semaphore.acquire();
+      updateSemaphores(semaphoreName);
+      goForward();
+    }
+
+    private void releasePermit(SemaphoreName semaphoreName) {
+      Semaphore semaphore = getSemaphore(semaphoreName);
+      if (semaphore.availablePermits() == 0) {
+        semaphore.release();
+      }
+    }
+
+    private boolean semaphoreHasPermits(SemaphoreName semaphoreName) {
+      Semaphore semaphore = getSemaphore(semaphoreName);
+      boolean hasPermit = semaphore.tryAcquire();
+      updateSemaphores(semaphoreName);
+      return hasPermit;
+    }
+
+    private void updateSemaphores(SemaphoreName semaphoreName) {
+      this.semaphore = getSemaphore(semaphoreName);
+    }
+
 
     @Override
     public void run() {
