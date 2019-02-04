@@ -12,83 +12,107 @@ import java.util.concurrent.Semaphore;
 
  */
 
+/**
+ * the class responsible for all the operations related to the running of a train instance
+ */
 public class Lab1 {
 
+  /**
+   * is used to identify the different switches
+   */
   enum SwitchName {
     NORTH,SOUTH,PITSTOP_EAST,PITSTOP_WEST
   }
 
+  /**
+   * is used to identify the different sensors
+   */
   enum SensorName {
-    NORTH_STATION,NORTH_OF_NORTH_STATION, CROSSING_WEST, CROSSING_NORTH, CROSSING_EAST, CROSSING_SOUTH,
+    SOUTH_OF_NORTH_STATION,NORTH_OF_NORTH_STATION, CROSSING_WEST, CROSSING_NORTH, CROSSING_EAST, CROSSING_SOUTH,
     SOUTHWEST_OF_JUNCTION_NORTH, EAST_OF_JUNCTION_NORTH, WEST_OF_JUNCTION_NORTH, SOUTHEAST_OF_JUNCTION_SOUTH,
-    EAST_OF_JUNCTION_SOUTH, WEST_OF_JUNCTION_SOUTH, SOUTH_STATION, SOUTH_OF_SOUTH_STATION, WEST_OF_PITSTOP_EAST,
+    EAST_OF_JUNCTION_SOUTH, WEST_OF_JUNCTION_SOUTH, NORTH_OF_SOUTH_STATION, SOUTH_OF_SOUTH_STATION, WEST_OF_PITSTOP_EAST,
     EAST_OF_PITSTOP_EAST, SOUTHWEST_OF_PITSTOP_EAST, WEST_OF_PITSTOP_WEST, EAST_OF_PITSTOP_WEST,
     SOUTHEAST_OF_PITSTOP_WEST
   }
 
+
+  /**
+   * is used to identify the different semaphores
+   */
   enum SemaphoreName {
     NORTH,EAST,WEST,SOUTH,PITSTOP,CROSSING
   }
 
+//
   private TSimInterface tsi;
 
   private List<Switch> switches = new ArrayList<>();
 
   private List<Sensor> sensors = new ArrayList<>();
 
-  private List<LabSemaphore> semaphores = new ArrayList<>();
+  private List<RestrictedArea> semaphores = new ArrayList<>();
 
 
   public Lab1(int speed1, int speed2) {
     tsi = TSimInterface.getInstance();
 
+    //All the switches
     switches.add(new Switch(17,7,SwitchName.NORTH));
     switches.add(new Switch(3,11,SwitchName.SOUTH));
     switches.add(new Switch(15,9,SwitchName.PITSTOP_EAST));
     switches.add(new Switch(4,9,SwitchName.PITSTOP_WEST));
 
+    //All the sensors for the two stations
     sensors.add(new Sensor(16,3,SensorName.NORTH_OF_NORTH_STATION));
-    sensors.add(new Sensor(16,5,SensorName.NORTH_STATION));
-    sensors.add(new Sensor(16,12,SensorName.SOUTH_STATION));
+    sensors.add(new Sensor(16,5,SensorName.SOUTH_OF_NORTH_STATION));
+    sensors.add(new Sensor(16,12,SensorName.NORTH_OF_SOUTH_STATION));
     sensors.add(new Sensor(16,13,SensorName.SOUTH_OF_SOUTH_STATION));
 
+    //All the sensors for the crossing
     sensors.add(new Sensor(8,6,SensorName.CROSSING_NORTH));
     sensors.add(new Sensor(7,7,SensorName.CROSSING_WEST));
     sensors.add(new Sensor(9,8,SensorName.CROSSING_SOUTH));
     sensors.add(new Sensor(9,7,SensorName.CROSSING_EAST));
 
+    //All the sensors for the northern junction
     sensors.add(new Sensor(16,7,SensorName.WEST_OF_JUNCTION_NORTH));
     sensors.add(new Sensor(16,8,SensorName.SOUTHWEST_OF_JUNCTION_NORTH));
     sensors.add(new Sensor(18,7,SensorName.EAST_OF_JUNCTION_NORTH));
 
-    sensors.add(new Sensor(16,9,SensorName.EAST_OF_PITSTOP_EAST));
-    sensors.add(new Sensor(14,9,SensorName.WEST_OF_PITSTOP_EAST));
-    sensors.add(new Sensor(14,10,SensorName.SOUTHWEST_OF_PITSTOP_EAST));
-
-    sensors.add(new Sensor(3,8,SensorName.WEST_OF_PITSTOP_WEST));
-    sensors.add(new Sensor(5,9,SensorName.EAST_OF_PITSTOP_WEST));
-    sensors.add(new Sensor(5,10,SensorName.SOUTHEAST_OF_PITSTOP_WEST));
-
+    //All the sensors for the sothern junction
     sensors.add(new Sensor(2,11,SensorName.WEST_OF_JUNCTION_SOUTH));
     sensors.add(new Sensor(4,11,SensorName.EAST_OF_JUNCTION_SOUTH));
     sensors.add(new Sensor(3,12,SensorName.SOUTHEAST_OF_JUNCTION_SOUTH));
 
+    //All the sensors for.....
+    sensors.add(new Sensor(16,9,SensorName.EAST_OF_PITSTOP_EAST));
+    sensors.add(new Sensor(14,9,SensorName.WEST_OF_PITSTOP_EAST));
+    sensors.add(new Sensor(14,10,SensorName.SOUTHWEST_OF_PITSTOP_EAST));
 
-    semaphores.add(new LabSemaphore(SemaphoreName.CROSSING,1));
-    semaphores.add(new LabSemaphore(SemaphoreName.NORTH,1));
-    semaphores.add(new LabSemaphore(SemaphoreName.SOUTH,1));
-    semaphores.add(new LabSemaphore(SemaphoreName.PITSTOP,1));
-    semaphores.add(new LabSemaphore(SemaphoreName.EAST,1));
-    semaphores.add(new LabSemaphore(SemaphoreName.WEST,1));
+    //All the sensors for.....
+    sensors.add(new Sensor(3,8,SensorName.WEST_OF_PITSTOP_WEST));
+    sensors.add(new Sensor(5,9,SensorName.EAST_OF_PITSTOP_WEST));
+    sensors.add(new Sensor(5,10,SensorName.SOUTHEAST_OF_PITSTOP_WEST));
+
+    //All the semaphores
+    semaphores.add(new RestrictedArea(SemaphoreName.CROSSING,1));
+    semaphores.add(new RestrictedArea(SemaphoreName.NORTH,1));
+    semaphores.add(new RestrictedArea(SemaphoreName.SOUTH,1));
+    semaphores.add(new RestrictedArea(SemaphoreName.PITSTOP,1));
+    semaphores.add(new RestrictedArea(SemaphoreName.EAST,1));
+    semaphores.add(new RestrictedArea(SemaphoreName.WEST,1));
 
     Train train1 = new Train(1,speed1,SensorName.NORTH_OF_NORTH_STATION,tsi,SemaphoreName.NORTH);
-    Train train2 = new Train(2,speed2,SensorName.SOUTH_STATION,tsi,SemaphoreName.SOUTH);
+    Train train2 = new Train(2,speed2,SensorName.NORTH_OF_SOUTH_STATION,tsi,SemaphoreName.SOUTH);
 
     train1.start();
     train2.start();
 
   }
 
+  /**
+   * Class to represent the switches
+   */
   class Switch {
     int x;
     int y;
@@ -101,6 +125,9 @@ public class Lab1 {
     }
   }
 
+  /**
+   * Class to represent the sensors
+   */
   class Sensor {
     int x;
     int y;
@@ -113,20 +140,26 @@ public class Lab1 {
     }
   }
 
-  class LabSemaphore {
+  /**
+   * class to representing a restricted area. 
+   */
+  class RestrictedArea {
     SemaphoreName semaphoreName;
     Semaphore semaphore;
 
-    LabSemaphore (SemaphoreName semaphoreName, int permits) {
+    RestrictedArea(SemaphoreName semaphoreName, int permits) {
       this.semaphoreName = semaphoreName;
       this.semaphore = new Semaphore(permits);
     }
   }
 
+  /**
+   * Class to represent the trains
+   */
   // TODO: Implement a representation of the train
   class Train extends Thread {
     boolean forward;
-    int velocity;
+    private int velocity;
     int id;
     TSimInterface tsi;
     int maxVelocity;
@@ -137,25 +170,25 @@ public class Lab1 {
     Train(int id, int startVelocity, SensorName startSensor, TSimInterface tsi, SemaphoreName semaphoreName) {
       this.id = id;
       this.forward = true;
-      this.velocity = checkVelocity(startVelocity);
-      this.tsi = tsi;
       this.maxVelocity = 15;
+      setVelocity(startVelocity);
+      this.tsi = tsi;
       this.lastSensor = startSensor;
       this.currentSemaphore = semaphoreName;
       try {
-        tsi.setSpeed(id,startVelocity);
+        tsi.setSpeed(id,this.velocity);
       } catch (CommandException e) {
         e.printStackTrace();
         System.exit(1);
       }
     }
 
-    private int checkVelocity(int startVelocity) {
-      if (startVelocity <= maxVelocity) {
-        return startVelocity;
+    private void setVelocity(int velocity) {
+      if (velocity <= maxVelocity) {
+        this.velocity = velocity;
       }
       else {
-        return maxVelocity;
+        this.velocity = maxVelocity;
       }
     }
 
@@ -181,7 +214,7 @@ public class Lab1 {
         activateBreak();
         sleep(1000 + (20 * velocity));
         changeDirection();
-        tsi.setSpeed(id, velocity);
+        goForward();
       }
       catch (CommandException e) {
         e.printStackTrace();
@@ -208,7 +241,7 @@ public class Lab1 {
     }
 
     private Semaphore getSemaphore(SemaphoreName name) {
-      for (LabSemaphore s : semaphores) {
+      for (RestrictedArea s : semaphores) {
         if (s.semaphoreName == name) {
           return s.semaphore;
         }
@@ -266,12 +299,12 @@ public class Lab1 {
               waitAtStation();
             }
             break;
-          case NORTH_STATION:
+          case SOUTH_OF_NORTH_STATION:
             if (lastSensor == SensorName.CROSSING_NORTH) {
               waitAtStation();
             }
             break;
-          case SOUTH_STATION:
+          case NORTH_OF_SOUTH_STATION:
             if (lastSensor == SensorName.EAST_OF_JUNCTION_SOUTH) {
               waitAtStation();
             }
@@ -455,7 +488,7 @@ public class Lab1 {
     public void run() {
       while (true) {
         try {
-          tsi.setSpeed(id, checkVelocity(this.velocity));
+          tsi.setSpeed(id, this.velocity);
 
         } catch (CommandException e) {
           e.printStackTrace();    // or only e.getMessage() for the error

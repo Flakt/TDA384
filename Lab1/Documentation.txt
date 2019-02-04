@@ -1,0 +1,27 @@
+
+
+
+
+Placement of the sensors:
+The sensors have been placed on all out and in paths from both the crossing and on the two 
+places where the track splits into two. On the crossing a sensor is needed on every in and 
+out part of track to always know when a train exits and enters the zone around the actual crossing. 
+If a train already is within the zone another can not enter until the first one has exited. 
+On the four places where two tracks merges into one sensors are used before the merge. 
+These sensors are there to look if a train already has entered the single file zone and 
+if the train should wait. There are also sensors after the merge. These are used when a 
+train is going the oposite direction and is used to see if the shortest path to the station 
+or the next single bit is free. If the shorterst path is under use the other path is simply taken. 
+Lastly sensores are also placed at the station so that the train know when to stop and turn back. 
+All the sensors are placed far back enough so that the trains have time to stop before the 
+specific crossing, merge or before running of the track at the station. 
+
+Choice of critical sections:
+
+Maximum train speed and the reason for it:
+The maximum train speed is set to 15 since no greater train speed was required in the lab instructions.
+
+How you tested your solution:
+We test our solution by running the trains for periods of time with varying speeds on the trains. 
+We make sure to select different speeds for the two trains to also test that they don't catch up to 
+each other and to test so that they are able to pass each other. 
