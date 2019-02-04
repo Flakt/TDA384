@@ -1,15 +1,11 @@
 import TSim.*;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Semaphore;
 
 /*
-  TODO: Implement train
-  TODO: Implement sensors
-  TODO: Implement some form of semaphore
+  TODO: Refactor the implementation of the sensors
   TODO: Implement handling of SensorEvents
   TODO: Implement handling of switches
   TODO: Evaluate if current sensor placements can be improved
@@ -23,9 +19,11 @@ public class Lab1 {
   }
 
   enum SensorName {
-    NORTH_STATION,NORTH_OF_NORTH_STATION,JUNCTION_WEST,JUNCTION_NORTH,JUNCTION_EAST,JUNCTION_SOUTH,
-    EAST_OF_NORTH_SWITCH,WEST_OF_PITSTOP_EAST,SOUTHWEST_OF_PITSTOP_EAST,WEST_OF_PITSTOP_WEST,WEST_OF_SOUTH_STATION,
-    SOUTHWEST_OF_SOUTH_STATION,SOUTH_STATION,SOUTH_OF_SOUTH_STATION
+    NORTH_STATION,NORTH_OF_NORTH_STATION, CROSSING_WEST, CROSSING_NORTH, CROSSING_EAST, CROSSING_SOUTH,
+    SOUTHWEST_OF_JUNCTION_NORTH, EAST_OF_JUNCTION_NORTH, WEST_OF_JUNCTION_NORTH, SOUTHEAST_OF_JUNCTION_SOUTH,
+    EAST_OF_JUNCTION_SOUTH, WEST_OF_JUNCTION_SOUTH, SOUTH_STATION, SOUTH_OF_SOUTH_STATION, WEST_OF_PITSTOP_EAST,
+    EAST_OF_PITSTOP_EAST, SOUTHWEST_OF_PITSTOP_EAST, WEST_OF_PITSTOP_WEST, EAST_OF_PITSTOP_WEST,
+    SOUTHEAST_OF_PITSTOP_WEST
   }
 
   enum SemaphoreName {
@@ -43,28 +41,38 @@ public class Lab1 {
 
   public Lab1(int speed1, int speed2) {
     tsi = TSimInterface.getInstance();
-    Train train1 = new Train(1,speed1,tsi);
-    Train train2 = new Train(2,speed2,tsi);
 
     switches.add(new Switch(17,7,SwitchName.NORTH));
     switches.add(new Switch(3,11,SwitchName.SOUTH));
     switches.add(new Switch(15,9,SwitchName.PITSTOP_EAST));
     switches.add(new Switch(4,9,SwitchName.PITSTOP_WEST));
 
-    sensors.add(new Sensor(15,3,SensorName.NORTH_OF_NORTH_STATION));
-    sensors.add(new Sensor(15,5,SensorName.NORTH_STATION));
-    sensors.add(new Sensor(6,5,SensorName.JUNCTION_WEST));
-    sensors.add(new Sensor(10,5,SensorName.JUNCTION_NORTH));
-    sensors.add(new Sensor(12,7,SensorName.JUNCTION_EAST));
-    sensors.add(new Sensor(12,8,SensorName.JUNCTION_SOUTH));
-    sensors.add(new Sensor(19,9,SensorName.EAST_OF_NORTH_SWITCH));
-    sensors.add(new Sensor(9,9,SensorName.WEST_OF_PITSTOP_EAST));
-    sensors.add(new Sensor(9,10,SensorName.SOUTHWEST_OF_PITSTOP_EAST));
-    sensors.add(new Sensor(1,10,SensorName.WEST_OF_PITSTOP_WEST));
-    sensors.add(new Sensor(5,11,SensorName.WEST_OF_SOUTH_STATION));
-    sensors.add(new Sensor(5,13,SensorName.SOUTHWEST_OF_SOUTH_STATION));
-    sensors.add(new Sensor(16,11,SensorName.SOUTH_STATION));
+    sensors.add(new Sensor(16,3,SensorName.NORTH_OF_NORTH_STATION));
+    sensors.add(new Sensor(16,5,SensorName.NORTH_STATION));
+    sensors.add(new Sensor(16,12,SensorName.SOUTH_STATION));
     sensors.add(new Sensor(16,13,SensorName.SOUTH_OF_SOUTH_STATION));
+
+    sensors.add(new Sensor(8,6,SensorName.CROSSING_NORTH));
+    sensors.add(new Sensor(7,7,SensorName.CROSSING_WEST));
+    sensors.add(new Sensor(9,8,SensorName.CROSSING_SOUTH));
+    sensors.add(new Sensor(9,7,SensorName.CROSSING_EAST));
+
+    sensors.add(new Sensor(16,7,SensorName.WEST_OF_JUNCTION_NORTH));
+    sensors.add(new Sensor(16,8,SensorName.SOUTHWEST_OF_JUNCTION_NORTH));
+    sensors.add(new Sensor(18,7,SensorName.EAST_OF_JUNCTION_NORTH));
+
+    sensors.add(new Sensor(16,9,SensorName.EAST_OF_PITSTOP_EAST));
+    sensors.add(new Sensor(14,9,SensorName.WEST_OF_PITSTOP_EAST));
+    sensors.add(new Sensor(14,10,SensorName.SOUTHWEST_OF_PITSTOP_EAST));
+
+    sensors.add(new Sensor(3,8,SensorName.WEST_OF_PITSTOP_WEST));
+    sensors.add(new Sensor(5,9,SensorName.EAST_OF_PITSTOP_WEST));
+    sensors.add(new Sensor(5,10,SensorName.SOUTHEAST_OF_PITSTOP_WEST));
+
+    sensors.add(new Sensor(2,11,SensorName.WEST_OF_JUNCTION_SOUTH));
+    sensors.add(new Sensor(4,11,SensorName.EAST_OF_JUNCTION_SOUTH));
+    sensors.add(new Sensor(3,12,SensorName.SOUTHEAST_OF_JUNCTION_SOUTH));
+
 
     semaphores.add(new LabSemaphore(SemaphoreName.CROSSING,1));
     semaphores.add(new LabSemaphore(SemaphoreName.NORTH,1));
@@ -72,6 +80,12 @@ public class Lab1 {
     semaphores.add(new LabSemaphore(SemaphoreName.PITSTOP,1));
     semaphores.add(new LabSemaphore(SemaphoreName.EAST,1));
     semaphores.add(new LabSemaphore(SemaphoreName.WEST,1));
+
+    Train train1 = new Train(1,speed1,SensorName.NORTH_OF_NORTH_STATION,tsi,SemaphoreName.NORTH);
+    Train train2 = new Train(2,speed2,SensorName.SOUTH_STATION,tsi,SemaphoreName.SOUTH);
+
+    train1.start();
+    train2.start();
 
   }
 
@@ -116,14 +130,18 @@ public class Lab1 {
     int id;
     TSimInterface tsi;
     int maxVelocity;
-    Semaphore semaphore;
+    SemaphoreName lastSemaphore;
+    SemaphoreName currentSemaphore;
+    SensorName lastSensor;
 
-    Train(int id, int startVelocity, TSimInterface tsi) {
+    Train(int id, int startVelocity, SensorName startSensor, TSimInterface tsi, SemaphoreName semaphoreName) {
       this.id = id;
       this.forward = true;
       this.velocity = checkVelocity(startVelocity);
       this.tsi = tsi;
       this.maxVelocity = 15;
+      this.lastSensor = startSensor;
+      this.currentSemaphore = semaphoreName;
       try {
         tsi.setSpeed(id,startVelocity);
       } catch (CommandException e) {
@@ -160,7 +178,7 @@ public class Lab1 {
 
     private void waitAtStation() {
       try {
-        tsi.setSpeed(id, 0);
+        activateBreak();
         sleep(1000 + (20 * velocity));
         changeDirection();
         tsi.setSpeed(id, velocity);
@@ -198,6 +216,15 @@ public class Lab1 {
       return null;
     }
 
+    private Sensor getSensor(int x, int y) {
+      for (Sensor s : sensors) {
+        if (s.x == x && s.y == y) {
+          return s;
+        }
+      }
+      return null;
+    }
+
     private void stopUntilPass(SemaphoreName semaphoreName) throws CommandException, InterruptedException {
       Semaphore semaphore = getSemaphore(semaphoreName);
       activateBreak();
@@ -210,6 +237,7 @@ public class Lab1 {
       Semaphore semaphore = getSemaphore(semaphoreName);
       if (semaphore.availablePermits() == 0) {
         semaphore.release();
+        lastSemaphore = currentSemaphore;
       }
     }
 
@@ -221,43 +249,228 @@ public class Lab1 {
     }
 
     private void updateSemaphores(SemaphoreName semaphoreName) {
-      this.semaphore = getSemaphore(semaphoreName);
+      if (semaphoreName != SemaphoreName.CROSSING) {
+        lastSemaphore = currentSemaphore;
+        currentSemaphore = semaphoreName;
+      }
+    }
+
+    private void manageSensorEvent(SensorEvent event) throws CommandException, InterruptedException {
+      boolean isActive = event.getStatus() == SensorEvent.ACTIVE;
+      System.out.println("I am doing my job");
+      SensorName sensorName = getSensor(event.getXpos(), event.getYpos()).sensorName;
+      if (isActive) {
+        switch (sensorName) {
+          case NORTH_OF_NORTH_STATION:
+            if (lastSensor == SensorName.CROSSING_WEST) {
+              waitAtStation();
+            }
+            break;
+          case NORTH_STATION:
+            if (lastSensor == SensorName.CROSSING_NORTH) {
+              waitAtStation();
+            }
+            break;
+          case SOUTH_STATION:
+            if (lastSensor == SensorName.EAST_OF_JUNCTION_SOUTH) {
+              waitAtStation();
+            }
+            break;
+          case SOUTH_OF_SOUTH_STATION:
+            if (lastSensor == SensorName.SOUTHEAST_OF_JUNCTION_SOUTH) {
+              waitAtStation();
+            }
+            break;
+
+          case CROSSING_WEST:
+            if (lastSensor == SensorName.CROSSING_EAST) {
+              releasePermit(SemaphoreName.CROSSING);
+            }
+            else {
+              stopUntilPass(SemaphoreName.CROSSING);
+            }
+            break;
+          case CROSSING_EAST:
+            if (lastSensor == SensorName.WEST_OF_JUNCTION_NORTH) {
+              stopUntilPass(SemaphoreName.CROSSING);
+            }
+            else {
+              releasePermit(SemaphoreName.CROSSING);
+            }
+            break;
+          case CROSSING_NORTH:
+            if (lastSensor == SensorName.CROSSING_SOUTH) {
+              releasePermit(SemaphoreName.CROSSING);
+            }
+            else {
+              stopUntilPass(SemaphoreName.CROSSING);
+            }
+            break;
+          case CROSSING_SOUTH:
+            if (lastSensor == SensorName.EAST_OF_JUNCTION_NORTH) {
+              stopUntilPass(SemaphoreName.CROSSING);
+            }
+            else {
+              releasePermit(SemaphoreName.CROSSING);
+            }
+            break;
+
+          case EAST_OF_JUNCTION_NORTH:
+            if (lastSensor == SensorName.WEST_OF_JUNCTION_NORTH || lastSensor == SensorName.SOUTHWEST_OF_JUNCTION_NORTH) {
+              releasePermit(SemaphoreName.NORTH);
+            }
+            else if (lastSensor == SensorName.EAST_OF_PITSTOP_EAST) {
+              if (semaphoreHasPermits(SemaphoreName.NORTH)) {
+                setSwitch(SwitchName.NORTH, TSimInterface.SWITCH_RIGHT);
+                goForward();
+              }
+              else {
+                setSwitch(SwitchName.NORTH, TSimInterface.SWITCH_LEFT);
+              }
+            }
+            break;
+          case WEST_OF_JUNCTION_NORTH:
+            if (lastSensor == SensorName.CROSSING_EAST) {
+              setSwitch(SwitchName.NORTH, TSimInterface.SWITCH_RIGHT);
+              stopUntilPass(SemaphoreName.NORTH);
+            }
+            else {
+              releasePermit(SemaphoreName.NORTH);
+            }
+            break;
+          case SOUTHWEST_OF_JUNCTION_NORTH:
+            if (lastSensor == SensorName.CROSSING_SOUTH) {
+              setSwitch(SwitchName.NORTH, TSimInterface.SWITCH_LEFT);
+              stopUntilPass(SemaphoreName.NORTH);
+            }
+            else {
+              releasePermit(SemaphoreName.NORTH);
+            }
+
+          case WEST_OF_JUNCTION_SOUTH:
+            if (lastSensor == SensorName.WEST_OF_PITSTOP_WEST) {
+              if (semaphoreHasPermits(SemaphoreName.SOUTH)) {
+                setSwitch(SwitchName.SOUTH, TSimInterface.SWITCH_LEFT);
+                goForward();
+              }
+              else {
+                setSwitch(SwitchName.SOUTH, TSimInterface.SWITCH_RIGHT);
+              }
+            }
+            else {
+              releasePermit(SemaphoreName.SOUTH);
+            }
+            break;
+          case EAST_OF_JUNCTION_SOUTH:
+            if (lastSensor == SensorName.WEST_OF_JUNCTION_SOUTH) {
+              releasePermit(SemaphoreName.SOUTH);
+            }
+            else {
+              setSwitch(SwitchName.SOUTH, TSimInterface.SWITCH_LEFT);
+              stopUntilPass(SemaphoreName.SOUTH);
+            }
+            break;
+          case SOUTHEAST_OF_JUNCTION_SOUTH:
+            if (lastSensor == SensorName.WEST_OF_JUNCTION_SOUTH) {
+              releasePermit(SemaphoreName.SOUTH);
+            }
+            else {
+              setSwitch(SwitchName.SOUTH, TSimInterface.SWITCH_LEFT);
+              stopUntilPass(SemaphoreName.SOUTH);
+            }
+            break;
+
+          case WEST_OF_PITSTOP_WEST:
+            if (lastSensor == SensorName.WEST_OF_JUNCTION_SOUTH) {
+              if (semaphoreHasPermits(SemaphoreName.PITSTOP)) {
+                setSwitch(SwitchName.PITSTOP_WEST, TSimInterface.SWITCH_LEFT);
+                goForward();
+              }
+              else {
+                setSwitch(SwitchName.PITSTOP_WEST, TSimInterface.SWITCH_RIGHT);
+              }
+            }
+            else {
+              releasePermit(SemaphoreName.PITSTOP);
+            }
+            break;
+          case EAST_OF_PITSTOP_WEST:
+            if (lastSensor == SensorName.WEST_OF_PITSTOP_WEST) {
+              releasePermit(SemaphoreName.WEST);
+            }
+            else {
+              setSwitch(SwitchName.PITSTOP_WEST, TSimInterface.SWITCH_LEFT);
+              stopUntilPass(SemaphoreName.WEST);
+            }
+            break;
+          case SOUTHEAST_OF_PITSTOP_WEST:
+            if (lastSensor == SensorName.WEST_OF_PITSTOP_WEST) {
+              releasePermit(SemaphoreName.WEST);
+            }
+            else {
+              setSwitch(SwitchName.PITSTOP_WEST, TSimInterface.SWITCH_RIGHT);
+              stopUntilPass(SemaphoreName.WEST);
+            }
+            break;
+
+          case EAST_OF_PITSTOP_EAST:
+            if (lastSensor == SensorName.WEST_OF_JUNCTION_NORTH) {
+              if (semaphoreHasPermits(SemaphoreName.PITSTOP)) {
+                setSwitch(SwitchName.PITSTOP_EAST, TSimInterface.SWITCH_LEFT);
+                goForward();
+              }
+              else {
+                setSwitch(SwitchName.PITSTOP_EAST, TSimInterface.SWITCH_RIGHT);
+              }
+            }
+            else {
+              releasePermit(SemaphoreName.PITSTOP);
+            }
+            break;
+          case WEST_OF_PITSTOP_EAST:
+            if (lastSensor == SensorName.EAST_OF_PITSTOP_EAST) {
+              releasePermit(SemaphoreName.EAST);
+            }
+            else {
+              setSwitch(SwitchName.PITSTOP_EAST, TSimInterface.SWITCH_LEFT);
+              stopUntilPass(SemaphoreName.EAST);
+            }
+            break;
+          case SOUTHWEST_OF_PITSTOP_EAST:
+            if (lastSensor == SensorName.EAST_OF_PITSTOP_EAST) {
+              releasePermit(SemaphoreName.EAST);
+            }
+            else {
+              setSwitch(SwitchName.PITSTOP_EAST, TSimInterface.SWITCH_RIGHT);
+              stopUntilPass(SemaphoreName.EAST);
+            }
+            break;
+        }
+        lastSensor = sensorName;
+      }
     }
 
 
     @Override
     public void run() {
-      boolean[] areaList = new boolean[7];
       while (true) {
         try {
-          SensorEvent event = tsi.getSensor(1);
-          int current = 0;
-          switch (event.getXpos()+event.getYpos()) {
-            case 1:
-              current = 1;
-              break;
-            case 2:
-              current = 2;
-            case 3:
-
-            case 4:
-
-            case 5:
-
-            case 6:
-
-          }
-          if (areaList[current] == true) {
-
-          }
-
+          tsi.setSpeed(id, checkVelocity(this.velocity));
 
         } catch (CommandException e) {
           e.printStackTrace();    // or only e.getMessage() for the error
           System.exit(1);
-        } catch (InterruptedException e) {
-          e.getMessage();
-          System.exit(1);
+        }
+        while (!this.isInterrupted()) {
+          try {
+            manageSensorEvent(tsi.getSensor(id));
+          } catch (CommandException e) {
+            e.printStackTrace();
+            System.exit(1);
+          } catch (InterruptedException e) {
+            e.printStackTrace();
+            System.exit(1);
+          }
         }
 
       }
