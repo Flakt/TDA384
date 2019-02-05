@@ -65,34 +65,34 @@ public class Lab1 {
     //All the stations.
     sensors.add(new Sensor(16,3,SensorName.NORTH_OF_NORTH_STATION));
     sensors.add(new Sensor(16,5,SensorName.SOUTH_OF_NORTH_STATION));
-    sensors.add(new Sensor(16,12,SensorName.NORTH_OF_SOUTH_STATION));
+    sensors.add(new Sensor(16,11,SensorName.NORTH_OF_SOUTH_STATION));
     sensors.add(new Sensor(16,13,SensorName.SOUTH_OF_SOUTH_STATION));
 
     //All the sensors surrounding the crossing.
-    sensors.add(new Sensor(8,6,SensorName.NORTH_OF_CROSSING));
-    sensors.add(new Sensor(7,7,SensorName.WEST_OF_CROSSING));
+    sensors.add(new Sensor(8,5,SensorName.NORTH_OF_CROSSING));
+    sensors.add(new Sensor(6,7,SensorName.WEST_OF_CROSSING));
     sensors.add(new Sensor(9,8,SensorName.SOUTH_OF_CROSSING));
-    sensors.add(new Sensor(9,7,SensorName.EAST_OF_CROSSING));
+    sensors.add(new Sensor(10,7,SensorName.EAST_OF_CROSSING));
 
     //All the sensors surrounding the north station switch.
-    sensors.add(new Sensor(16,7,SensorName.WEST_OF_NORTH_STATION_SWITCH));
-    sensors.add(new Sensor(16,8,SensorName.SOUTHWEST_OF_NORTH_STATION_SWITCH));
+    sensors.add(new Sensor(14,7,SensorName.WEST_OF_NORTH_STATION_SWITCH));
+    sensors.add(new Sensor(15,8,SensorName.SOUTHWEST_OF_NORTH_STATION_SWITCH));
     sensors.add(new Sensor(18,7,SensorName.EAST_OF_NORTH_STATION_SWITCH));
 
     //All the sensors surrounding the south station switch.
     sensors.add(new Sensor(2,11,SensorName.WEST_OF_SOUTH_STATION_SWITCH));
-    sensors.add(new Sensor(4,11,SensorName.EAST_OF_SOUTH_STATION_SWITCH));
-    sensors.add(new Sensor(3,12,SensorName.SOUTHEAST_OF_SOUTH_STATION_SWITCH));
+    sensors.add(new Sensor(5,11,SensorName.EAST_OF_SOUTH_STATION_SWITCH));
+    sensors.add(new Sensor(4,13,SensorName.SOUTHEAST_OF_SOUTH_STATION_SWITCH));
 
     //All the sensors surrounding the switch east to the middle of the map.
     sensors.add(new Sensor(16,9,SensorName.EAST_OF_MIDDLE_SWITCH_EAST));
-    sensors.add(new Sensor(14,9,SensorName.WEST_OF_MIDDLE_SWITCH_EAST));
-    sensors.add(new Sensor(14,10,SensorName.SOUTHWEST_OF_MIDDLE_SWITCH_EAST));
+    sensors.add(new Sensor(12,9,SensorName.WEST_OF_MIDDLE_SWITCH_EAST));
+    sensors.add(new Sensor(13,10,SensorName.SOUTHWEST_OF_MIDDLE_SWITCH_EAST));
 
     //All the sensors surrounding the switch west to the middle of the map.
-    sensors.add(new Sensor(3,8,SensorName.WEST_OF_MIDDLE_SWITCH_WEST));
-    sensors.add(new Sensor(5,9,SensorName.EAST_OF_MIDDLE_SWITCH_WEST));
-    sensors.add(new Sensor(5,10,SensorName.SOUTHEAST_OF_MIDDLE_SWITCH_WEST));
+    sensors.add(new Sensor(3,9,SensorName.WEST_OF_MIDDLE_SWITCH_WEST));
+    sensors.add(new Sensor(7,9,SensorName.EAST_OF_MIDDLE_SWITCH_WEST));
+    sensors.add(new Sensor(6,10,SensorName.SOUTHEAST_OF_MIDDLE_SWITCH_WEST));
 
     //All the semaphores.
     semaphores.add(new SemaphoreArea(SemaphoreName.CROSSING,1));
@@ -103,8 +103,11 @@ public class Lab1 {
     semaphores.add(new SemaphoreArea(SemaphoreName.SINGLETRACK_WEST,1));
 
     //The two trains to run on the map.
-    Train train1 = new Train(1,speed1,SensorName.NORTH_OF_NORTH_STATION,tsi,SemaphoreName.NORTH_STATION);
+    Train train1 = new Train(1,speed1,SensorName.NORTH_OF_NORTH_STATION,tsi,null);
     Train train2 = new Train(2,speed2,SensorName.NORTH_OF_SOUTH_STATION,tsi,SemaphoreName.SOUTH_STATION);
+
+    semaphores.get(2).semaphore.tryAcquire();
+
 
     train1.start();
     train2.start();
@@ -171,11 +174,12 @@ public class Lab1 {
     Train(int id, int startVelocity, SensorName startSensor, TSimInterface tsi, SemaphoreName semaphoreName) {
       this.id = id;
       this.forward = true;
-      this.maxVelocity = 15;
+      this.maxVelocity = 50;
       setVelocity(startVelocity);
       this.tsi = tsi;
       this.lastSensor = startSensor;
       this.currentSemaphore = semaphoreName;
+
       try {
         tsi.setSpeed(id,this.velocity);
       } catch (CommandException e) {
@@ -307,10 +311,8 @@ public class Lab1 {
      * @param semaphoreName   The newly acquired semaphore.
      */
     private void updateSemaphores(SemaphoreName semaphoreName) {
-      if (semaphoreName != SemaphoreName.CROSSING) {  //TODO: why compare to the crossing???
         lastSemaphore = currentSemaphore;
         currentSemaphore = semaphoreName;
-      }
     }
 
     /**
@@ -372,7 +374,7 @@ public class Lab1 {
             }
             break;
           case SOUTH_OF_CROSSING:
-            if (lastSensor == SensorName.EAST_OF_NORTH_STATION_SWITCH) {
+            if (lastSensor == SensorName.SOUTHWEST_OF_NORTH_STATION_SWITCH) {
               stopUntilPass(SemaphoreName.CROSSING);
             }
             else {
@@ -381,67 +383,66 @@ public class Lab1 {
             break;
 
           case EAST_OF_NORTH_STATION_SWITCH:
-            if (lastSensor == SensorName.WEST_OF_NORTH_STATION_SWITCH || lastSensor == SensorName.SOUTHWEST_OF_NORTH_STATION_SWITCH) {
+            if (lastSensor == SensorName.SOUTHWEST_OF_NORTH_STATION_SWITCH) {
               releasePermit(SemaphoreName.NORTH_STATION);
             }
             else if (lastSensor == SensorName.EAST_OF_MIDDLE_SWITCH_EAST) {
               if (semaphoreHasPermits(SemaphoreName.NORTH_STATION)) {
-                setSwitch(SwitchName.NORTH_STATION_SWITCH, TSimInterface.SWITCH_RIGHT);
+                setSwitch(SwitchName.NORTH_STATION_SWITCH, TSimInterface.SWITCH_LEFT);
                 goForward();
               }
               else {
-                setSwitch(SwitchName.NORTH_STATION_SWITCH, TSimInterface.SWITCH_LEFT);
+                setSwitch(SwitchName.NORTH_STATION_SWITCH, TSimInterface.SWITCH_RIGHT);
               }
             }
             break;
           case WEST_OF_NORTH_STATION_SWITCH:
             if (lastSensor == SensorName.EAST_OF_CROSSING) {
+              stopUntilPass(SemaphoreName.SINGLETRACK_EAST);
               setSwitch(SwitchName.NORTH_STATION_SWITCH, TSimInterface.SWITCH_RIGHT);
-              stopUntilPass(SemaphoreName.NORTH_STATION);
             }
             else {
-              releasePermit(SemaphoreName.NORTH_STATION);
+              releasePermit(SemaphoreName.SINGLETRACK_EAST);
             }
             break;
           case SOUTHWEST_OF_NORTH_STATION_SWITCH:
             if (lastSensor == SensorName.SOUTH_OF_CROSSING) {
+              stopUntilPass(SemaphoreName.SINGLETRACK_EAST);
               setSwitch(SwitchName.NORTH_STATION_SWITCH, TSimInterface.SWITCH_LEFT);
-              stopUntilPass(SemaphoreName.NORTH_STATION);
             }
             else {
-              releasePermit(SemaphoreName.NORTH_STATION);
+              releasePermit(SemaphoreName.SINGLETRACK_EAST);
             }
 
           case WEST_OF_SOUTH_STATION_SWITCH:
             if (lastSensor == SensorName.WEST_OF_MIDDLE_SWITCH_WEST) {
               if (semaphoreHasPermits(SemaphoreName.SOUTH_STATION)) {
                 setSwitch(SwitchName.SOUTH_STATION_SWITCH, TSimInterface.SWITCH_LEFT);
-                goForward();
               }
               else {
                 setSwitch(SwitchName.SOUTH_STATION_SWITCH, TSimInterface.SWITCH_RIGHT);
               }
             }
-            else {
+            else if (lastSensor == SensorName.EAST_OF_SOUTH_STATION_SWITCH) {
               releasePermit(SemaphoreName.SOUTH_STATION);
             }
             break;
           case EAST_OF_SOUTH_STATION_SWITCH:
             if (lastSensor == SensorName.WEST_OF_SOUTH_STATION_SWITCH) {
-              releasePermit(SemaphoreName.SOUTH_STATION);
+              releasePermit(SemaphoreName.SINGLETRACK_WEST);
             }
             else {
+              stopUntilPass(SemaphoreName.SINGLETRACK_WEST);
               setSwitch(SwitchName.SOUTH_STATION_SWITCH, TSimInterface.SWITCH_LEFT);
-              stopUntilPass(SemaphoreName.SOUTH_STATION);
             }
             break;
           case SOUTHEAST_OF_SOUTH_STATION_SWITCH:
             if (lastSensor == SensorName.WEST_OF_SOUTH_STATION_SWITCH) {
-              releasePermit(SemaphoreName.SOUTH_STATION);
+              releasePermit(SemaphoreName.SINGLETRACK_WEST);
             }
             else {
-              setSwitch(SwitchName.SOUTH_STATION_SWITCH, TSimInterface.SWITCH_LEFT);
-              stopUntilPass(SemaphoreName.SOUTH_STATION);
+              stopUntilPass(SemaphoreName.SINGLETRACK_WEST);
+              setSwitch(SwitchName.SOUTH_STATION_SWITCH, TSimInterface.SWITCH_RIGHT);
             }
             break;
 
@@ -464,8 +465,8 @@ public class Lab1 {
               releasePermit(SemaphoreName.SINGLETRACK_WEST);
             }
             else {
-              setSwitch(SwitchName.MIDDLE_SWITCH_WEST, TSimInterface.SWITCH_LEFT);
               stopUntilPass(SemaphoreName.SINGLETRACK_WEST);
+              setSwitch(SwitchName.MIDDLE_SWITCH_WEST, TSimInterface.SWITCH_LEFT);
             }
             break;
           case SOUTHEAST_OF_MIDDLE_SWITCH_WEST:
@@ -473,19 +474,19 @@ public class Lab1 {
               releasePermit(SemaphoreName.SINGLETRACK_WEST);
             }
             else {
-              setSwitch(SwitchName.MIDDLE_SWITCH_WEST, TSimInterface.SWITCH_RIGHT);
               stopUntilPass(SemaphoreName.SINGLETRACK_WEST);
+              setSwitch(SwitchName.MIDDLE_SWITCH_WEST, TSimInterface.SWITCH_RIGHT);
             }
             break;
 
           case EAST_OF_MIDDLE_SWITCH_EAST:
-            if (lastSensor == SensorName.WEST_OF_NORTH_STATION_SWITCH) {
+            if (lastSensor == SensorName.EAST_OF_NORTH_STATION_SWITCH) {
               if (semaphoreHasPermits(SemaphoreName.MIDDLE_DUBBLE_TRACK)) {
-                setSwitch(SwitchName.MIDDLE_SWITCH_EAST, TSimInterface.SWITCH_LEFT);
+                setSwitch(SwitchName.MIDDLE_SWITCH_EAST, TSimInterface.SWITCH_RIGHT);
                 goForward();
               }
               else {
-                setSwitch(SwitchName.MIDDLE_SWITCH_EAST, TSimInterface.SWITCH_RIGHT);
+                setSwitch(SwitchName.MIDDLE_SWITCH_EAST, TSimInterface.SWITCH_LEFT);
               }
             }
             else {
@@ -497,8 +498,8 @@ public class Lab1 {
               releasePermit(SemaphoreName.SINGLETRACK_EAST);
             }
             else {
-              setSwitch(SwitchName.MIDDLE_SWITCH_EAST, TSimInterface.SWITCH_LEFT);
               stopUntilPass(SemaphoreName.SINGLETRACK_EAST);
+              setSwitch(SwitchName.MIDDLE_SWITCH_EAST, TSimInterface.SWITCH_RIGHT);
             }
             break;
           case SOUTHWEST_OF_MIDDLE_SWITCH_EAST:
@@ -506,8 +507,8 @@ public class Lab1 {
               releasePermit(SemaphoreName.SINGLETRACK_EAST);
             }
             else {
-              setSwitch(SwitchName.MIDDLE_SWITCH_EAST, TSimInterface.SWITCH_RIGHT);
               stopUntilPass(SemaphoreName.SINGLETRACK_EAST);
+              setSwitch(SwitchName.MIDDLE_SWITCH_EAST, TSimInterface.SWITCH_LEFT);
             }
             break;
         }
