@@ -1,16 +1,11 @@
 import TSim.*;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Semaphore;
 
-/*
-  TODO: Refactor the implementation of the sensors
-  TODO: Implement handling of SensorEvents
-  TODO: Implement handling of switches
-  TODO: Evaluate if current sensor placements can be improved
-
- */
+import static java.util.Arrays.asList;
 
 /**
  * the class responsible for all the operations related to the running of a train instance
@@ -35,7 +30,6 @@ public class Lab1 {
     SOUTHEAST_OF_MIDDLE_SWITCH_WEST
   }
 
-
   /**
    * is used to identify the different semaphores
    */
@@ -43,118 +37,70 @@ public class Lab1 {
     NORTH_STATION, SINGLETRACK_EAST, SINGLETRACK_WEST, SOUTH_STATION, MIDDLE_DUBBLE_TRACK,CROSSING
   }
 
-//
+  private Map<SemaphoreName, Semaphore> semaphoreMap = new HashMap<>();
+  private Map<List<Integer>, SensorName> sensorMap = new HashMap<>();
+  private Map<SwitchName, List<Integer>> switchMap = new HashMap<>();
+
   private TSimInterface tsi;
-
-  private List<Switch> switches = new ArrayList<>();
-
-  private List<Sensor> sensors = new ArrayList<>();
-
-  private List<SemaphoreArea> semaphores = new ArrayList<>();
-
 
   public Lab1(int speed1, int speed2) {
     tsi = TSimInterface.getInstance();
 
     //All the switches.
-    switches.add(new Switch(17,7,SwitchName.NORTH_STATION_SWITCH));
-    switches.add(new Switch(3,11,SwitchName.SOUTH_STATION_SWITCH));
-    switches.add(new Switch(15,9,SwitchName.MIDDLE_SWITCH_EAST));
-    switches.add(new Switch(4,9,SwitchName.MIDDLE_SWITCH_WEST));
+    switchMap.put(SwitchName.NORTH_STATION_SWITCH, asList(17,7));
+    switchMap.put(SwitchName.SOUTH_STATION_SWITCH,asList(3,11));
+    switchMap.put(SwitchName.MIDDLE_SWITCH_EAST,asList(15,9));
+    switchMap.put(SwitchName.MIDDLE_SWITCH_WEST,asList(4,9));
 
     //All the stations.
-    sensors.add(new Sensor(16,3,SensorName.NORTH_OF_NORTH_STATION));
-    sensors.add(new Sensor(16,5,SensorName.SOUTH_OF_NORTH_STATION));
-    sensors.add(new Sensor(16,11,SensorName.NORTH_OF_SOUTH_STATION));
-    sensors.add(new Sensor(16,13,SensorName.SOUTH_OF_SOUTH_STATION));
+    sensorMap.put(asList(16,3), SensorName.NORTH_OF_NORTH_STATION);
+    sensorMap.put(asList(16,5), SensorName.SOUTH_OF_NORTH_STATION);
+    sensorMap.put(asList(16,11), SensorName.NORTH_OF_SOUTH_STATION);
+    sensorMap.put(asList(16,13), SensorName.SOUTH_OF_SOUTH_STATION);
 
     //All the sensors surrounding the crossing.
-    sensors.add(new Sensor(8,5,SensorName.NORTH_OF_CROSSING));
-    sensors.add(new Sensor(6,7,SensorName.WEST_OF_CROSSING));
-    sensors.add(new Sensor(9,8,SensorName.SOUTH_OF_CROSSING));
-    sensors.add(new Sensor(10,7,SensorName.EAST_OF_CROSSING));
+    sensorMap.put(asList(8,5), SensorName.NORTH_OF_CROSSING);
+    sensorMap.put(asList(6,7), SensorName.WEST_OF_CROSSING);
+    sensorMap.put(asList(9,8), SensorName.SOUTH_OF_CROSSING);
+    sensorMap.put(asList(10,7), SensorName.EAST_OF_CROSSING);
 
     //All the sensors surrounding the north station switch.
-    sensors.add(new Sensor(14,7,SensorName.WEST_OF_NORTH_STATION_SWITCH));
-    sensors.add(new Sensor(15,8,SensorName.SOUTHWEST_OF_NORTH_STATION_SWITCH));
-    sensors.add(new Sensor(18,7,SensorName.EAST_OF_NORTH_STATION_SWITCH));
+    sensorMap.put(asList(14,7), SensorName.WEST_OF_NORTH_STATION_SWITCH);
+    sensorMap.put(asList(15,8), SensorName.SOUTHWEST_OF_NORTH_STATION_SWITCH);
+    sensorMap.put(asList(18,7), SensorName.EAST_OF_NORTH_STATION_SWITCH);
 
     //All the sensors surrounding the south station switch.
-    sensors.add(new Sensor(2,11,SensorName.WEST_OF_SOUTH_STATION_SWITCH));
-    sensors.add(new Sensor(5,11,SensorName.EAST_OF_SOUTH_STATION_SWITCH));
-    sensors.add(new Sensor(4,13,SensorName.SOUTHEAST_OF_SOUTH_STATION_SWITCH));
+    sensorMap.put(asList(2,11), SensorName.WEST_OF_SOUTH_STATION_SWITCH);
+    sensorMap.put(asList(5,11), SensorName.EAST_OF_SOUTH_STATION_SWITCH);
+    sensorMap.put(asList(4,13), SensorName.SOUTHEAST_OF_SOUTH_STATION_SWITCH);
 
     //All the sensors surrounding the switch east to the middle of the map.
-    sensors.add(new Sensor(16,9,SensorName.EAST_OF_MIDDLE_SWITCH_EAST));
-    sensors.add(new Sensor(12,9,SensorName.WEST_OF_MIDDLE_SWITCH_EAST));
-    sensors.add(new Sensor(13,10,SensorName.SOUTHWEST_OF_MIDDLE_SWITCH_EAST));
+    sensorMap.put(asList(16,9), SensorName.EAST_OF_MIDDLE_SWITCH_EAST);
+    sensorMap.put(asList(12,9), SensorName.WEST_OF_MIDDLE_SWITCH_EAST);
+    sensorMap.put(asList(13,10), SensorName.SOUTHWEST_OF_MIDDLE_SWITCH_EAST);
 
     //All the sensors surrounding the switch west to the middle of the map.
-    sensors.add(new Sensor(3,9,SensorName.WEST_OF_MIDDLE_SWITCH_WEST));
-    sensors.add(new Sensor(7,9,SensorName.EAST_OF_MIDDLE_SWITCH_WEST));
-    sensors.add(new Sensor(6,10,SensorName.SOUTHEAST_OF_MIDDLE_SWITCH_WEST));
+    sensorMap.put(asList(3,9), SensorName.WEST_OF_MIDDLE_SWITCH_WEST);
+    sensorMap.put(asList(7,9), SensorName.EAST_OF_MIDDLE_SWITCH_WEST);
+    sensorMap.put(asList(6,10), SensorName.SOUTHEAST_OF_MIDDLE_SWITCH_WEST);
 
     //All the semaphores.
-    semaphores.add(new SemaphoreArea(SemaphoreName.CROSSING,1));
-    semaphores.add(new SemaphoreArea(SemaphoreName.NORTH_STATION,1));
-    semaphores.add(new SemaphoreArea(SemaphoreName.SOUTH_STATION,1));
-    semaphores.add(new SemaphoreArea(SemaphoreName.MIDDLE_DUBBLE_TRACK,1));
-    semaphores.add(new SemaphoreArea(SemaphoreName.SINGLETRACK_EAST,1));
-    semaphores.add(new SemaphoreArea(SemaphoreName.SINGLETRACK_WEST,1));
+    semaphoreMap.put(SemaphoreName.CROSSING, new Semaphore(1));
+    semaphoreMap.put(SemaphoreName.NORTH_STATION, new Semaphore(1));
+    semaphoreMap.put(SemaphoreName.SOUTH_STATION, new Semaphore(1));
+    semaphoreMap.put(SemaphoreName.MIDDLE_DUBBLE_TRACK, new Semaphore(1));
+    semaphoreMap.put(SemaphoreName.SINGLETRACK_EAST, new Semaphore(1));
+    semaphoreMap.put(SemaphoreName.SINGLETRACK_WEST, new Semaphore(1));
 
     //The two trains to run on the map.
     Train train1 = new Train(1,speed1,SensorName.NORTH_OF_NORTH_STATION,tsi,null);
     Train train2 = new Train(2,speed2,SensorName.NORTH_OF_SOUTH_STATION,tsi,SemaphoreName.SOUTH_STATION);
 
-    semaphores.get(2).semaphore.tryAcquire();
-
+    semaphoreMap.get(SemaphoreName.SOUTH_STATION).tryAcquire();
 
     train1.start();
     train2.start();
 
-  }
-
-  /**
-   * Class to represent the different switches.
-   */
-  class Switch {
-    int x;
-    int y;
-    SwitchName switchName;
-
-    Switch (int x, int y, SwitchName switchName) {
-      this.x = x;
-      this.y = y;
-      this.switchName = switchName;
-    }
-  }
-
-  /**
-   * Class to represent the different sensors.
-   */
-  class Sensor {
-    int x;
-    int y;
-    SensorName sensorName;
-
-    Sensor (int x, int y, SensorName sensorName) {
-      this.x = x;
-      this.y = y;
-      this.sensorName = sensorName;
-    }
-  }
-
-  /**
-   * Class to represent the different areas limited by semaphores.
-   */
-  class SemaphoreArea {
-    SemaphoreName semaphoreName;
-    Semaphore semaphore;
-
-    SemaphoreArea(SemaphoreName semaphoreName, int permits) {
-      this.semaphoreName = semaphoreName;
-      this.semaphore = new Semaphore(permits);
-    }
   }
 
   /**
@@ -232,42 +178,7 @@ public class Lab1 {
     }
 
     private void setSwitch(SwitchName switchName, int direction) throws CommandException {
-      Switch s = getSwitch(switchName);
-      tsi.setSwitch(s.x,s.y,direction);
-    }
-
-    private Switch getSwitch(SwitchName switchName) {
-      for (Switch s : switches) {
-        if (s.switchName == switchName) {
-          return s;
-        }
-      }
-      return null;
-    }
-
-    private Semaphore getSemaphore(SemaphoreName name) {
-      for (SemaphoreArea s : semaphores) {
-        if (s.semaphoreName == name) {
-          return s.semaphore;
-        }
-      }
-      return null;
-    }
-
-    /**
-     * Gets the sensor corresponding to the given coordinates.
-     *
-     * @param x   x coordinate
-     * @param y   y coordinate
-     * @return    the sensor corresponding to the coordinates or null if none are found.
-     */
-    private Sensor getSensor(int x, int y) {
-      for (Sensor s : sensors) {
-        if (s.x == x && s.y == y) {
-          return s;
-        }
-      }
-      return null;
+      tsi.setSwitch(switchMap.get(switchName).get(0),switchMap.get(switchName).get(1),direction);
     }
 
     /**
@@ -278,7 +189,7 @@ public class Lab1 {
      * @throws InterruptedException
      */
     private void stopUntilPass(SemaphoreName semaphoreName) throws CommandException, InterruptedException {
-      Semaphore semaphore = getSemaphore(semaphoreName);
+      Semaphore semaphore = semaphoreMap.get(semaphoreName);
       activateBreak();
       semaphore.acquire();
       updateSemaphores(semaphoreName);
@@ -291,7 +202,7 @@ public class Lab1 {
      * @param semaphoreName   The name of the semaphore who's permit is to be released.
      */
     private void releasePermit(SemaphoreName semaphoreName) {
-      Semaphore semaphore = getSemaphore(semaphoreName);
+      Semaphore semaphore = semaphoreMap.get(semaphoreName);
       if (semaphore.availablePermits() == 0) {
         semaphore.release();
         lastSemaphore = currentSemaphore;
@@ -299,7 +210,7 @@ public class Lab1 {
     }
 
     private boolean semaphoreHasPermits(SemaphoreName semaphoreName) {
-      Semaphore semaphore = getSemaphore(semaphoreName);
+      Semaphore semaphore = semaphoreMap.get(semaphoreName);
       boolean hasPermit = semaphore.tryAcquire();
       updateSemaphores(semaphoreName);
       return hasPermit;
@@ -324,8 +235,7 @@ public class Lab1 {
      */
     private void manageSensorEvent(SensorEvent event) throws CommandException, InterruptedException {
       boolean isActive = event.getStatus() == SensorEvent.ACTIVE;
-      System.out.println("I am doing my job");
-      SensorName sensorName = getSensor(event.getXpos(), event.getYpos()).sensorName;
+      SensorName sensorName = sensorMap.get(asList(event.getXpos(),event.getYpos()));
       if (isActive) {
         switch (sensorName) {
           case NORTH_OF_NORTH_STATION:
@@ -515,7 +425,6 @@ public class Lab1 {
         lastSensor = sensorName;
       }
     }
-
 
     @Override
     public void run() {
