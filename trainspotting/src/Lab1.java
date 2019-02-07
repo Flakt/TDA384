@@ -23,11 +23,11 @@ public class Lab1 {
    * is used to identify the different sensors
    */
   enum SensorName {
-    SOUTH_OF_NORTH_STATION,NORTH_OF_NORTH_STATION, WEST_OF_CROSSING, NORTH_OF_CROSSING, EAST_OF_CROSSING, SOUTH_OF_CROSSING,
-    SOUTHWEST_OF_NORTH_STATION_SWITCH, EAST_OF_NORTH_STATION_SWITCH, WEST_OF_NORTH_STATION_SWITCH, SOUTHEAST_OF_SOUTH_STATION_SWITCH,
-    EAST_OF_SOUTH_STATION_SWITCH, WEST_OF_SOUTH_STATION_SWITCH, NORTH_OF_SOUTH_STATION, SOUTH_OF_SOUTH_STATION, WEST_OF_MIDDLE_SWITCH_EAST,
-    EAST_OF_MIDDLE_SWITCH_EAST, SOUTHWEST_OF_MIDDLE_SWITCH_EAST, WEST_OF_MIDDLE_SWITCH_WEST, EAST_OF_MIDDLE_SWITCH_WEST,
-    SOUTHEAST_OF_MIDDLE_SWITCH_WEST
+    SOUTH_OF_NORTH_STATION,NORTH_OF_NORTH_STATION, WEST_OF_CROSSING, NORTH_OF_CROSSING,
+    EAST_OF_CROSSING, SOUTH_OF_CROSSING, SOUTHWEST_OF_NORTH_STATION_SWITCH,
+    WEST_OF_NORTH_STATION_SWITCH, SOUTHEAST_OF_SOUTH_STATION_SWITCH, EAST_OF_SOUTH_STATION_SWITCH,
+    NORTH_OF_SOUTH_STATION, SOUTH_OF_SOUTH_STATION, WEST_OF_MIDDLE_SWITCH_EAST,
+    SOUTHWEST_OF_MIDDLE_SWITCH_EAST, EAST_OF_MIDDLE_SWITCH_WEST, SOUTHEAST_OF_MIDDLE_SWITCH_WEST
   }
 
   /**
@@ -67,20 +67,16 @@ public class Lab1 {
     //All the sensors surrounding the north station switch.
     sensorMap.put(asList(14,7), SensorName.WEST_OF_NORTH_STATION_SWITCH);
     sensorMap.put(asList(15,8), SensorName.SOUTHWEST_OF_NORTH_STATION_SWITCH);
-    sensorMap.put(asList(18,7), SensorName.EAST_OF_NORTH_STATION_SWITCH);
 
     //All the sensors surrounding the south station switch.
-    sensorMap.put(asList(2,11), SensorName.WEST_OF_SOUTH_STATION_SWITCH);
     sensorMap.put(asList(5,11), SensorName.EAST_OF_SOUTH_STATION_SWITCH);
     sensorMap.put(asList(4,13), SensorName.SOUTHEAST_OF_SOUTH_STATION_SWITCH);
 
     //All the sensors surrounding the switch east to the middle of the map.
-    sensorMap.put(asList(16,9), SensorName.EAST_OF_MIDDLE_SWITCH_EAST);
     sensorMap.put(asList(12,9), SensorName.WEST_OF_MIDDLE_SWITCH_EAST);
     sensorMap.put(asList(13,10), SensorName.SOUTHWEST_OF_MIDDLE_SWITCH_EAST);
 
     //All the sensors surrounding the switch west to the middle of the map.
-    sensorMap.put(asList(3,9), SensorName.WEST_OF_MIDDLE_SWITCH_WEST);
     sensorMap.put(asList(7,9), SensorName.EAST_OF_MIDDLE_SWITCH_WEST);
     sensorMap.put(asList(6,10), SensorName.SOUTHEAST_OF_MIDDLE_SWITCH_WEST);
 
@@ -93,8 +89,8 @@ public class Lab1 {
     semaphoreMap.put(SemaphoreName.SINGLETRACK_WEST, new Semaphore(1));
 
     //The two trains to run on the map.
-    Train train1 = new Train(1,speed1,SensorName.NORTH_OF_NORTH_STATION,tsi,null);
-    Train train2 = new Train(2,speed2,SensorName.NORTH_OF_SOUTH_STATION,tsi,SemaphoreName.SOUTH_STATION);
+    Train train1 = new Train(1,speed1,SensorName.NORTH_OF_NORTH_STATION,tsi,null, true);
+    Train train2 = new Train(2,speed2,SensorName.NORTH_OF_SOUTH_STATION,tsi,SemaphoreName.SOUTH_STATION, false);
 
     semaphoreMap.get(SemaphoreName.SOUTH_STATION).tryAcquire();
 
@@ -108,23 +104,20 @@ public class Lab1 {
    */
   // TODO: Implement a representation of the train
   class Train extends Thread {
-    boolean forward;
+    boolean direction;
     private int velocity;
     int id;
     TSimInterface tsi;
     int maxVelocity;
-    SemaphoreName lastSemaphore;
     SemaphoreName currentSemaphore;
-    SensorName lastSensor;
 
-    Train(int id, int startVelocity, SensorName startSensor, TSimInterface tsi, SemaphoreName semaphoreName) {
+    Train(int id, int startVelocity, SensorName startSensor, TSimInterface tsi, SemaphoreName semaphoreName, boolean direction) {
       this.id = id;
-      this.forward = true;
       this.maxVelocity = 50;
       setVelocity(startVelocity);
       this.tsi = tsi;
-      this.lastSensor = startSensor;
       this.currentSemaphore = semaphoreName;
+      this.direction = direction;
 
       try {
         tsi.setSpeed(id,this.velocity);
@@ -147,17 +140,9 @@ public class Lab1 {
       tsi.setSpeed(id,0);
     }
 
-    private void goForward() throws CommandException {
-      if (forward) {
-        tsi.setSpeed(id, velocity);
-      }
-      else {
-        tsi.setSpeed(id, -velocity);
-      }
-    }
-
     private void changeDirection() {
-      forward = !forward;
+      velocity = -velocity;
+      direction = !direction;
     }
 
     private void waitAtStation() {
@@ -165,7 +150,7 @@ public class Lab1 {
         activateBreak();
         sleep(1000 + (20 * velocity));
         changeDirection();
-        goForward();
+        tsi.setSpeed(id, velocity);
       }
       catch (CommandException e) {
         e.printStackTrace();
@@ -192,8 +177,8 @@ public class Lab1 {
       Semaphore semaphore = semaphoreMap.get(semaphoreName);
       activateBreak();
       semaphore.acquire();
-      updateSemaphores(semaphoreName);
-      goForward();
+      currentSemaphore = semaphoreName;
+      tsi.setSpeed(id, velocity);
     }
 
     /**
@@ -205,25 +190,14 @@ public class Lab1 {
       Semaphore semaphore = semaphoreMap.get(semaphoreName);
       if (semaphore.availablePermits() == 0) {
         semaphore.release();
-        lastSemaphore = currentSemaphore;
       }
     }
 
     private boolean semaphoreHasPermits(SemaphoreName semaphoreName) {
       Semaphore semaphore = semaphoreMap.get(semaphoreName);
       boolean hasPermit = semaphore.tryAcquire();
-      updateSemaphores(semaphoreName);
+      currentSemaphore = semaphoreName;
       return hasPermit;
-    }
-
-    /**
-     * Sets the acquired semaphore to the current one and saves the old one as the last semaphore.
-     *
-     * @param semaphoreName   The newly acquired semaphore.
-     */
-    private void updateSemaphores(SemaphoreName semaphoreName) {
-        lastSemaphore = currentSemaphore;
-        currentSemaphore = semaphoreName;
     }
 
     /**
@@ -238,58 +212,19 @@ public class Lab1 {
       SensorName sensorName = sensorMap.get(asList(event.getXpos(),event.getYpos()));
       if (isActive) {
         switch (sensorName) {
-          case NORTH_OF_NORTH_STATION:
-            if (lastSensor == SensorName.WEST_OF_CROSSING) {
-              waitAtStation();
-            }
+          case NORTH_OF_NORTH_STATION: case SOUTH_OF_NORTH_STATION:
+            if (direction)  waitAtStation();
             break;
-          case SOUTH_OF_NORTH_STATION:
-            if (lastSensor == SensorName.NORTH_OF_CROSSING) {
-              waitAtStation();
-            }
+          case NORTH_OF_SOUTH_STATION: case SOUTH_OF_SOUTH_STATION:
+            if (!direction) waitAtStation();
             break;
-          case NORTH_OF_SOUTH_STATION:
-            if (lastSensor == SensorName.EAST_OF_SOUTH_STATION_SWITCH) {
-              waitAtStation();
-            }
+          case WEST_OF_CROSSING: case NORTH_OF_CROSSING:
+            if (direction) releasePermit(SemaphoreName.CROSSING);
+            else stopUntilPass(SemaphoreName.CROSSING);
             break;
-          case SOUTH_OF_SOUTH_STATION:
-            if (lastSensor == SensorName.SOUTHEAST_OF_SOUTH_STATION_SWITCH) {
-              waitAtStation();
-            }
-            break;
-
-          case WEST_OF_CROSSING:
-            if (lastSensor == SensorName.EAST_OF_CROSSING) {
-              releasePermit(SemaphoreName.CROSSING);
-            }
-            else {
-              stopUntilPass(SemaphoreName.CROSSING);
-            }
-            break;
-          case EAST_OF_CROSSING:
-            if (lastSensor == SensorName.WEST_OF_NORTH_STATION_SWITCH) {
-              stopUntilPass(SemaphoreName.CROSSING);
-            }
-            else {
-              releasePermit(SemaphoreName.CROSSING);
-            }
-            break;
-          case NORTH_OF_CROSSING:
-            if (lastSensor == SensorName.SOUTH_OF_CROSSING) {
-              releasePermit(SemaphoreName.CROSSING);
-            }
-            else {
-              stopUntilPass(SemaphoreName.CROSSING);
-            }
-            break;
-          case SOUTH_OF_CROSSING:
-            if (lastSensor == SensorName.SOUTHWEST_OF_NORTH_STATION_SWITCH) {
-              stopUntilPass(SemaphoreName.CROSSING);
-            }
-            else {
-              releasePermit(SemaphoreName.CROSSING);
-            }
+          case EAST_OF_CROSSING: case SOUTH_OF_CROSSING:
+            if (!direction) stopUntilPass(SemaphoreName.CROSSING);
+            else releasePermit(SemaphoreName.CROSSING);
             break;
 
           case EAST_OF_NORTH_STATION_SWITCH:
@@ -299,7 +234,6 @@ public class Lab1 {
             else if (lastSensor == SensorName.EAST_OF_MIDDLE_SWITCH_EAST) {
               if (semaphoreHasPermits(SemaphoreName.NORTH_STATION)) {
                 setSwitch(SwitchName.NORTH_STATION_SWITCH, TSimInterface.SWITCH_LEFT);
-                goForward();
               }
               else {
                 setSwitch(SwitchName.NORTH_STATION_SWITCH, TSimInterface.SWITCH_RIGHT);
@@ -360,7 +294,6 @@ public class Lab1 {
             if (lastSensor == SensorName.WEST_OF_SOUTH_STATION_SWITCH) {
               if (semaphoreHasPermits(SemaphoreName.MIDDLE_DUBBLE_TRACK)) {
                 setSwitch(SwitchName.MIDDLE_SWITCH_WEST, TSimInterface.SWITCH_LEFT);
-                goForward();
               }
               else {
                 setSwitch(SwitchName.MIDDLE_SWITCH_WEST, TSimInterface.SWITCH_RIGHT);
@@ -393,7 +326,6 @@ public class Lab1 {
             if (lastSensor == SensorName.EAST_OF_NORTH_STATION_SWITCH) {
               if (semaphoreHasPermits(SemaphoreName.MIDDLE_DUBBLE_TRACK)) {
                 setSwitch(SwitchName.MIDDLE_SWITCH_EAST, TSimInterface.SWITCH_RIGHT);
-                goForward();
               }
               else {
                 setSwitch(SwitchName.MIDDLE_SWITCH_EAST, TSimInterface.SWITCH_LEFT);
