@@ -7,32 +7,20 @@ import java.util.concurrent.Semaphore;
 
 import static java.util.Arrays.asList;
 
-/**
- * the class responsible for all the operations related to the running of a train instance
- */
 public class Lab1 {
 
-  /**
-   * is used to identify the different switches
-   */
   enum SwitchName {
     NORTH_STATION_SWITCH, SOUTH_STATION_SWITCH, MIDDLE_SWITCH_EAST, MIDDLE_SWITCH_WEST
   }
 
-  /**
-   * is used to identify the different sensors
-   */
   enum SensorName {
-    SOUTH_OF_NORTH_STATION,NORTH_OF_NORTH_STATION, WEST_OF_CROSSING, NORTH_OF_CROSSING,
-    EAST_OF_CROSSING, SOUTH_OF_CROSSING, SOUTHWEST_OF_NORTH_STATION_SWITCH,
-    WEST_OF_NORTH_STATION_SWITCH, SOUTHEAST_OF_SOUTH_STATION_SWITCH, EAST_OF_SOUTH_STATION_SWITCH,
-    NORTH_OF_SOUTH_STATION, SOUTH_OF_SOUTH_STATION, WEST_OF_MIDDLE_SWITCH_EAST,
-    SOUTHWEST_OF_MIDDLE_SWITCH_EAST, EAST_OF_MIDDLE_SWITCH_WEST, SOUTHEAST_OF_MIDDLE_SWITCH_WEST
+    SOUTH_OF_NORTH_STATION,NORTH_OF_NORTH_STATION, WEST_OF_CROSSING, NORTH_OF_CROSSING, EAST_OF_CROSSING, SOUTH_OF_CROSSING,
+    SOUTHWEST_OF_NORTH_STATION_SWITCH, EAST_OF_NORTH_STATION_SWITCH, WEST_OF_NORTH_STATION_SWITCH, SOUTHEAST_OF_SOUTH_STATION_SWITCH,
+    EAST_OF_SOUTH_STATION_SWITCH, WEST_OF_SOUTH_STATION_SWITCH, NORTH_OF_SOUTH_STATION, SOUTH_OF_SOUTH_STATION, WEST_OF_MIDDLE_SWITCH_EAST,
+    EAST_OF_MIDDLE_SWITCH_EAST, SOUTHWEST_OF_MIDDLE_SWITCH_EAST, WEST_OF_MIDDLE_SWITCH_WEST, EAST_OF_MIDDLE_SWITCH_WEST,
+    SOUTHEAST_OF_MIDDLE_SWITCH_WEST
   }
 
-  /**
-   * is used to identify the different semaphores
-   */
   enum SemaphoreName {
     NORTH_STATION, SINGLETRACK_EAST, SINGLETRACK_WEST, SOUTH_STATION, MIDDLE_DUBBLE_TRACK,CROSSING
   }
@@ -67,16 +55,20 @@ public class Lab1 {
     //All the sensors surrounding the north station switch.
     sensorMap.put(asList(14,7), SensorName.WEST_OF_NORTH_STATION_SWITCH);
     sensorMap.put(asList(15,8), SensorName.SOUTHWEST_OF_NORTH_STATION_SWITCH);
+    sensorMap.put(asList(18,7), SensorName.EAST_OF_NORTH_STATION_SWITCH);
 
     //All the sensors surrounding the south station switch.
+    sensorMap.put(asList(2,11), SensorName.WEST_OF_SOUTH_STATION_SWITCH);
     sensorMap.put(asList(5,11), SensorName.EAST_OF_SOUTH_STATION_SWITCH);
     sensorMap.put(asList(4,13), SensorName.SOUTHEAST_OF_SOUTH_STATION_SWITCH);
 
     //All the sensors surrounding the switch east to the middle of the map.
+    sensorMap.put(asList(16,9), SensorName.EAST_OF_MIDDLE_SWITCH_EAST);
     sensorMap.put(asList(12,9), SensorName.WEST_OF_MIDDLE_SWITCH_EAST);
     sensorMap.put(asList(13,10), SensorName.SOUTHWEST_OF_MIDDLE_SWITCH_EAST);
 
     //All the sensors surrounding the switch west to the middle of the map.
+    sensorMap.put(asList(3,9), SensorName.WEST_OF_MIDDLE_SWITCH_WEST);
     sensorMap.put(asList(7,9), SensorName.EAST_OF_MIDDLE_SWITCH_WEST);
     sensorMap.put(asList(6,10), SensorName.SOUTHEAST_OF_MIDDLE_SWITCH_WEST);
 
@@ -89,8 +81,8 @@ public class Lab1 {
     semaphoreMap.put(SemaphoreName.SINGLETRACK_WEST, new Semaphore(1));
 
     //The two trains to run on the map.
-    Train train1 = new Train(1,speed1,SensorName.NORTH_OF_NORTH_STATION,tsi,null, true);
-    Train train2 = new Train(2,speed2,SensorName.NORTH_OF_SOUTH_STATION,tsi,SemaphoreName.SOUTH_STATION, false);
+    Train train1 = new Train(1,speed1,SensorName.NORTH_OF_NORTH_STATION,tsi,null, false);
+    Train train2 = new Train(2,speed2,SensorName.NORTH_OF_SOUTH_STATION,tsi,SemaphoreName.SOUTH_STATION, true);
 
     semaphoreMap.get(SemaphoreName.SOUTH_STATION).tryAcquire();
 
@@ -99,10 +91,6 @@ public class Lab1 {
 
   }
 
-  /**
-   * Class containing all the behavior and logic necessary for the function of a given train.
-   */
-  // TODO: Implement a representation of the train
   class Train extends Thread {
     boolean direction;
     private int velocity;
@@ -130,8 +118,7 @@ public class Lab1 {
     private void setVelocity(int velocity) {
       if (velocity <= maxVelocity) {
         this.velocity = velocity;
-      }
-      else {
+      } else {
         this.velocity = maxVelocity;
       }
     }
@@ -148,15 +135,13 @@ public class Lab1 {
     private void waitAtStation() {
       try {
         activateBreak();
-        sleep(1000 + (20 * velocity));
+        sleep(1000 + (20 * Math.abs(velocity)));
         changeDirection();
         tsi.setSpeed(id, velocity);
-      }
-      catch (CommandException e) {
+      } catch (CommandException e) {
         e.printStackTrace();
         System.exit(1);
-      }
-      catch (InterruptedException e) {
+      } catch (InterruptedException e) {
         e.printStackTrace();
         System.exit(1);
       }
@@ -166,13 +151,6 @@ public class Lab1 {
       tsi.setSwitch(switchMap.get(switchName).get(0),switchMap.get(switchName).get(1),direction);
     }
 
-    /**
-     * Stops the train until it is able to acquire the corresponding semaphore.
-     *
-     * @param semaphoreName         The name corresponding to the semaphore that is to be acquired.
-     * @throws CommandException
-     * @throws InterruptedException
-     */
     private void stopUntilPass(SemaphoreName semaphoreName) throws CommandException, InterruptedException {
       Semaphore semaphore = semaphoreMap.get(semaphoreName);
       activateBreak();
@@ -181,11 +159,6 @@ public class Lab1 {
       tsi.setSpeed(id, velocity);
     }
 
-    /**
-     * Releases the permit of a given semaphore.
-     *
-     * @param semaphoreName   The name of the semaphore who's permit is to be released.
-     */
     private void releasePermit(SemaphoreName semaphoreName) {
       Semaphore semaphore = semaphoreMap.get(semaphoreName);
       if (semaphore.availablePermits() == 0) {
@@ -200,13 +173,14 @@ public class Lab1 {
       return hasPermit;
     }
 
-    /**
-     * Handels sensor events for the given train depending what sensor has be triggered.
-     *
-     * @param event   The given sensor event to handel.
-     * @throws CommandException
-     * @throws InterruptedException
-     */
+    private void handleExitSwitch(SemaphoreName semaphoreName, SwitchName switchName, int direction1, int direction2) throws CommandException{
+      if (semaphoreHasPermits(semaphoreName)) {
+        setSwitch(switchName, direction1);
+      } else {
+        setSwitch(switchName, direction2);
+      }
+    }
+
     private void manageSensorEvent(SensorEvent event) throws CommandException, InterruptedException {
       boolean isActive = event.getStatus() == SensorEvent.ACTIVE;
       SensorName sensorName = sensorMap.get(asList(event.getXpos(),event.getYpos()));
@@ -223,138 +197,107 @@ public class Lab1 {
             else stopUntilPass(SemaphoreName.CROSSING);
             break;
           case EAST_OF_CROSSING: case SOUTH_OF_CROSSING:
-            if (!direction) stopUntilPass(SemaphoreName.CROSSING);
+            if (direction) stopUntilPass(SemaphoreName.CROSSING);
             else releasePermit(SemaphoreName.CROSSING);
             break;
 
           case EAST_OF_NORTH_STATION_SWITCH:
-            if (lastSensor == SensorName.SOUTHWEST_OF_NORTH_STATION_SWITCH) {
+            if (!direction) {
               releasePermit(SemaphoreName.NORTH_STATION);
-            }
-            else if (lastSensor == SensorName.EAST_OF_MIDDLE_SWITCH_EAST) {
-              if (semaphoreHasPermits(SemaphoreName.NORTH_STATION)) {
-                setSwitch(SwitchName.NORTH_STATION_SWITCH, TSimInterface.SWITCH_LEFT);
-              }
-              else {
-                setSwitch(SwitchName.NORTH_STATION_SWITCH, TSimInterface.SWITCH_RIGHT);
-              }
+            } else {
+              handleExitSwitch(SemaphoreName.NORTH_STATION,SwitchName.NORTH_STATION_SWITCH,TSimInterface.SWITCH_LEFT,TSimInterface.SWITCH_RIGHT);
             }
             break;
           case WEST_OF_NORTH_STATION_SWITCH:
-            if (lastSensor == SensorName.EAST_OF_CROSSING) {
+            if (!direction) {
               stopUntilPass(SemaphoreName.SINGLETRACK_EAST);
               setSwitch(SwitchName.NORTH_STATION_SWITCH, TSimInterface.SWITCH_RIGHT);
-            }
-            else {
+            } else {
               releasePermit(SemaphoreName.SINGLETRACK_EAST);
             }
             break;
           case SOUTHWEST_OF_NORTH_STATION_SWITCH:
-            if (lastSensor == SensorName.SOUTH_OF_CROSSING) {
+            if (!direction) {
               stopUntilPass(SemaphoreName.SINGLETRACK_EAST);
               setSwitch(SwitchName.NORTH_STATION_SWITCH, TSimInterface.SWITCH_LEFT);
             }
             else {
               releasePermit(SemaphoreName.SINGLETRACK_EAST);
             }
-
+            break;
           case WEST_OF_SOUTH_STATION_SWITCH:
-            if (lastSensor == SensorName.WEST_OF_MIDDLE_SWITCH_WEST) {
-              if (semaphoreHasPermits(SemaphoreName.SOUTH_STATION)) {
-                setSwitch(SwitchName.SOUTH_STATION_SWITCH, TSimInterface.SWITCH_LEFT);
-              }
-              else {
-                setSwitch(SwitchName.SOUTH_STATION_SWITCH, TSimInterface.SWITCH_RIGHT);
-              }
-            }
-            else if (lastSensor == SensorName.EAST_OF_SOUTH_STATION_SWITCH) {
+            if (!direction) {
+              System.out.println(semaphoreMap.get(SemaphoreName.SOUTH_STATION).availablePermits());
+              handleExitSwitch(SemaphoreName.SOUTH_STATION,SwitchName.SOUTH_STATION_SWITCH,TSimInterface.SWITCH_LEFT,TSimInterface.SWITCH_RIGHT);
+            } else {
               releasePermit(SemaphoreName.SOUTH_STATION);
             }
             break;
           case EAST_OF_SOUTH_STATION_SWITCH:
-            if (lastSensor == SensorName.WEST_OF_SOUTH_STATION_SWITCH) {
+            if (!direction) {
               releasePermit(SemaphoreName.SINGLETRACK_WEST);
-            }
-            else {
+            } else {
               stopUntilPass(SemaphoreName.SINGLETRACK_WEST);
               setSwitch(SwitchName.SOUTH_STATION_SWITCH, TSimInterface.SWITCH_LEFT);
             }
             break;
           case SOUTHEAST_OF_SOUTH_STATION_SWITCH:
-            if (lastSensor == SensorName.WEST_OF_SOUTH_STATION_SWITCH) {
+            if (!direction) {
               releasePermit(SemaphoreName.SINGLETRACK_WEST);
-            }
-            else {
+            } else {
               stopUntilPass(SemaphoreName.SINGLETRACK_WEST);
               setSwitch(SwitchName.SOUTH_STATION_SWITCH, TSimInterface.SWITCH_RIGHT);
             }
             break;
 
           case WEST_OF_MIDDLE_SWITCH_WEST:
-            if (lastSensor == SensorName.WEST_OF_SOUTH_STATION_SWITCH) {
-              if (semaphoreHasPermits(SemaphoreName.MIDDLE_DUBBLE_TRACK)) {
-                setSwitch(SwitchName.MIDDLE_SWITCH_WEST, TSimInterface.SWITCH_LEFT);
-              }
-              else {
-                setSwitch(SwitchName.MIDDLE_SWITCH_WEST, TSimInterface.SWITCH_RIGHT);
-              }
-            }
-            else {
+            if (direction) {
+              handleExitSwitch(SemaphoreName.MIDDLE_DUBBLE_TRACK,SwitchName.MIDDLE_SWITCH_WEST,TSimInterface.SWITCH_LEFT,TSimInterface.SWITCH_RIGHT);
+            } else {
               releasePermit(SemaphoreName.MIDDLE_DUBBLE_TRACK);
             }
             break;
           case EAST_OF_MIDDLE_SWITCH_WEST:
-            if (lastSensor == SensorName.WEST_OF_MIDDLE_SWITCH_WEST) {
+            if (direction) {
               releasePermit(SemaphoreName.SINGLETRACK_WEST);
-            }
-            else {
+            } else {
               stopUntilPass(SemaphoreName.SINGLETRACK_WEST);
               setSwitch(SwitchName.MIDDLE_SWITCH_WEST, TSimInterface.SWITCH_LEFT);
             }
             break;
           case SOUTHEAST_OF_MIDDLE_SWITCH_WEST:
-            if (lastSensor == SensorName.WEST_OF_MIDDLE_SWITCH_WEST) {
+            if (direction) {
               releasePermit(SemaphoreName.SINGLETRACK_WEST);
-            }
-            else {
+            } else {
               stopUntilPass(SemaphoreName.SINGLETRACK_WEST);
               setSwitch(SwitchName.MIDDLE_SWITCH_WEST, TSimInterface.SWITCH_RIGHT);
             }
             break;
 
           case EAST_OF_MIDDLE_SWITCH_EAST:
-            if (lastSensor == SensorName.EAST_OF_NORTH_STATION_SWITCH) {
-              if (semaphoreHasPermits(SemaphoreName.MIDDLE_DUBBLE_TRACK)) {
-                setSwitch(SwitchName.MIDDLE_SWITCH_EAST, TSimInterface.SWITCH_RIGHT);
-              }
-              else {
-                setSwitch(SwitchName.MIDDLE_SWITCH_EAST, TSimInterface.SWITCH_LEFT);
-              }
-            }
-            else {
+            if (!direction) {
+              handleExitSwitch(SemaphoreName.MIDDLE_DUBBLE_TRACK,SwitchName.MIDDLE_SWITCH_EAST,TSimInterface.SWITCH_RIGHT,TSimInterface.SWITCH_LEFT);
+            } else {
               releasePermit(SemaphoreName.MIDDLE_DUBBLE_TRACK);
             }
             break;
           case WEST_OF_MIDDLE_SWITCH_EAST:
-            if (lastSensor == SensorName.EAST_OF_MIDDLE_SWITCH_EAST) {
+            if (!direction) {
               releasePermit(SemaphoreName.SINGLETRACK_EAST);
-            }
-            else {
+            } else {
               stopUntilPass(SemaphoreName.SINGLETRACK_EAST);
               setSwitch(SwitchName.MIDDLE_SWITCH_EAST, TSimInterface.SWITCH_RIGHT);
             }
             break;
           case SOUTHWEST_OF_MIDDLE_SWITCH_EAST:
-            if (lastSensor == SensorName.EAST_OF_MIDDLE_SWITCH_EAST) {
+            if (!direction) {
               releasePermit(SemaphoreName.SINGLETRACK_EAST);
-            }
-            else {
+            } else {
               stopUntilPass(SemaphoreName.SINGLETRACK_EAST);
               setSwitch(SwitchName.MIDDLE_SWITCH_EAST, TSimInterface.SWITCH_LEFT);
             }
             break;
         }
-        lastSensor = sensorName;
       }
     }
 
@@ -379,7 +322,6 @@ public class Lab1 {
             System.exit(1);
           }
         }
-
       }
     }
   }
