@@ -79,8 +79,8 @@ public class Lab1 {
     semaphoreMap.put(SemaphoreName.SINGLETRACK_WEST, new Semaphore(1));
 
     //The two trains to run on the map.
-    Train train1 = new Train(1, speed1,TSimInterface.getInstance(), false);
-    Train train2 = new Train(2, speed2, TSimInterface.getInstance(), true);
+    Train train1 = new Train(1, speed1,TSimInterface.getInstance(), false, false);
+    Train train2 = new Train(2, speed2, TSimInterface.getInstance(), true, true);
 
     // this is to ensure that the station train2 starts at is acquired even though it actually
     // never has entered the station but spontaneously spawned there.
@@ -91,17 +91,18 @@ public class Lab1 {
   }
 
   class Train extends Thread {
-    private boolean headedNorth;   //used during sensor events to determine the way a train is headed. 
+    private boolean headedNorth, hasSemaphore;   //used during sensor events to determine the way a train is headed.
     private int velocity, maxVelocity;
     private int id;
     private TSimInterface tsi;
 
-    Train(int id, int startVelocity, TSimInterface tsi, boolean direction) {
+    Train(int id, int startVelocity, TSimInterface tsi, boolean direction, boolean hasSemaphore) {
       this.id = id;
       this.maxVelocity = 19;
       setVelocity(startVelocity);
       this.tsi = tsi;
       this.headedNorth = direction;
+      this.hasSemaphore = hasSemaphore;
 
       try {
         tsi.setSpeed(id,this.velocity);
@@ -148,20 +149,22 @@ public class Lab1 {
       Semaphore semaphore = semaphoreMap.get(semaphoreName);
       tsi.setSpeed(id,0);
       semaphore.acquire();
+      hasSemaphore = true;
       tsi.setSpeed(id, velocity);
     }
 
     private void releasePermit(SemaphoreName semaphoreName) {
       Semaphore semaphore = semaphoreMap.get(semaphoreName);
-      if (semaphore.availablePermits() == 0) {
+      if (hasSemaphore) {
         semaphore.release();
+        hasSemaphore = false;
       }
     }
 
     //Generalisation of the situation when the train is approaching a switch having to choose what way to go.
     private void choosePath(SemaphoreName semaphoreName, SwitchName switchName, int direction1, int direction2) throws CommandException{
-      boolean permitAcquired = semaphoreMap.get(semaphoreName).tryAcquire();
-      if (permitAcquired) {
+      hasSemaphore = semaphoreMap.get(semaphoreName).tryAcquire();
+      if (hasSemaphore) {
         setSwitch(switchName, direction1);
       } else {
         setSwitch(switchName, direction2);
