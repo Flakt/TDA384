@@ -45,7 +45,7 @@ public class Lab1 {
     sensorMap.put(asList(16,13), SensorName.SOUTH_OF_SOUTH_STATION);
 
     //All the sensors surrounding the crossing.
-    sensorMap.put(asList(9,5), SensorName.NORTH_OF_CROSSING);
+    sensorMap.put(asList(8,5), SensorName.NORTH_OF_CROSSING);
     sensorMap.put(asList(6,7), SensorName.WEST_OF_CROSSING);
     sensorMap.put(asList(9,8), SensorName.SOUTH_OF_CROSSING);
     sensorMap.put(asList(10,7), SensorName.EAST_OF_CROSSING);
