@@ -71,7 +71,7 @@ public class Lab1 {
     sensorMap.put(asList(7,9), SensorName.EAST_OF_MIDDLE_SWITCH_WEST);
     sensorMap.put(asList(6,10), SensorName.SOUTHEAST_OF_MIDDLE_SWITCH_WEST);
 
-    //All the semaphores.
+    //All the acquiredSemaphores.
     semaphoreMap.put(SemaphoreName.CROSSING, new Semaphore(1));
     semaphoreMap.put(SemaphoreName.NORTH_STATION, new Semaphore(1));
     semaphoreMap.put(SemaphoreName.SOUTH_STATION, new Semaphore(1));
@@ -95,7 +95,7 @@ public class Lab1 {
     private boolean headedNorth;   //used during sensor events to determine the way a train is headed.
     private int velocity, maxVelocity;
     private int id;
-    private List<SemaphoreName> semaphores = new ArrayList<>();
+    private List<SemaphoreName> acquiredSemaphores = new ArrayList<>();
     private TSimInterface tsi;
 
     Train(int id, int startVelocity, TSimInterface tsi, boolean direction, SemaphoreName semaphoreName) {
@@ -104,7 +104,7 @@ public class Lab1 {
       setVelocity(startVelocity);
       this.tsi = tsi;
       this.headedNorth = direction;
-      semaphores.add(semaphoreName);
+      acquiredSemaphores.add(semaphoreName);
 
       try {
         tsi.setSpeed(id,this.velocity);
@@ -151,15 +151,15 @@ public class Lab1 {
       Semaphore semaphore = semaphoreMap.get(semaphoreName);
       tsi.setSpeed(id,0);
       semaphore.acquire();
-      semaphores.add(semaphoreName);
+      acquiredSemaphores.add(semaphoreName);
       tsi.setSpeed(id, velocity);
     }
 
     private void releasePermit(SemaphoreName semaphoreName) {
       Semaphore semaphore = semaphoreMap.get(semaphoreName);
-      if (semaphores.contains(semaphoreName)) {
+      if (acquiredSemaphores.contains(semaphoreName)) {
         semaphore.release();
-        semaphores.remove(semaphoreName);
+        acquiredSemaphores.remove(semaphoreName);
       }
     }
 
@@ -168,7 +168,7 @@ public class Lab1 {
       boolean hasSemaphore = semaphoreMap.get(semaphoreName).tryAcquire();
       if (hasSemaphore) {
         setSwitch(switchName, direction1);
-        semaphores.add(semaphoreName);
+        acquiredSemaphores.add(semaphoreName);
       } else {
         setSwitch(switchName, direction2);
       }
