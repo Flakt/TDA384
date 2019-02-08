@@ -1,5 +1,6 @@
 import TSim.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,9 +47,9 @@ public class Lab1 {
 
     //All the sensors surrounding the crossing.
     sensorMap.put(asList(9,5), SensorName.NORTH_OF_CROSSING);
-    sensorMap.put(asList(6,7), SensorName.WEST_OF_CROSSING);
-    sensorMap.put(asList(9,8), SensorName.SOUTH_OF_CROSSING);
-    sensorMap.put(asList(10,7), SensorName.EAST_OF_CROSSING);
+    sensorMap.put(asList(6,6), SensorName.WEST_OF_CROSSING);
+    sensorMap.put(asList(10,8), SensorName.SOUTH_OF_CROSSING);
+    sensorMap.put(asList(11,7), SensorName.EAST_OF_CROSSING);
 
     //All the sensors surrounding the north station switch.
     sensorMap.put(asList(14,7), SensorName.WEST_OF_NORTH_STATION_SWITCH);
@@ -94,7 +95,7 @@ public class Lab1 {
     private boolean headedNorth;   //used during sensor events to determine the way a train is headed.
     private int velocity, maxVelocity;
     private int id;
-    private SemaphoreName currentSemaphore,lastSemaphore;
+    private List<SemaphoreName> semaphores = new ArrayList<>();
     private TSimInterface tsi;
 
     Train(int id, int startVelocity, TSimInterface tsi, boolean direction, SemaphoreName semaphoreName) {
@@ -103,8 +104,7 @@ public class Lab1 {
       setVelocity(startVelocity);
       this.tsi = tsi;
       this.headedNorth = direction;
-      this.currentSemaphore = semaphoreName;
-      this.lastSemaphore = currentSemaphore;
+      semaphores.add(semaphoreName);
 
       try {
         tsi.setSpeed(id,this.velocity);
@@ -151,16 +151,15 @@ public class Lab1 {
       Semaphore semaphore = semaphoreMap.get(semaphoreName);
       tsi.setSpeed(id,0);
       semaphore.acquire();
-      lastSemaphore = currentSemaphore;
-      currentSemaphore = semaphoreName;
+      semaphores.add(semaphoreName);
       tsi.setSpeed(id, velocity);
     }
 
     private void releasePermit(SemaphoreName semaphoreName) {
       Semaphore semaphore = semaphoreMap.get(semaphoreName);
-      if (semaphoreName.equals(lastSemaphore) || semaphoreName.equals(SemaphoreName.CROSSING)) {
+      if (semaphores.contains(semaphoreName)) {
         semaphore.release();
-        lastSemaphore = currentSemaphore;
+        semaphores.remove(semaphoreName);
       }
     }
 
@@ -169,8 +168,7 @@ public class Lab1 {
       boolean hasSemaphore = semaphoreMap.get(semaphoreName).tryAcquire();
       if (hasSemaphore) {
         setSwitch(switchName, direction1);
-        lastSemaphore = currentSemaphore;
-        currentSemaphore = semaphoreName;
+        semaphores.add(semaphoreName);
       } else {
         setSwitch(switchName, direction2);
       }
