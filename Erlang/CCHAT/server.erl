@@ -20,18 +20,37 @@ handle(S, {join, Ch, Client}) ->
         failed -> {reply, failed, S}
       end;
     false -> genserver:start(list_to_atom(Ch), S, channel),
-      {reply, join
+      {reply, join, [Ch | S]}
   end;
-  not_implemented.
 
-channel() ->
-
-handle(S, kill_channels) ->
+handle(S, {leave, Ch, Client}) ->
   % Iterates (hopefully) through all channels registered to a server and
   % stops them
   lists:foreach(fun(Ch) -> genserver:stop(list_to_atom(Ch)) end, S),
   {reply,ok,[]}.
 
+channel(Clients, {join, Client})->
+  case lists:member(Client,Clients) of 
+    true -> {reply, failed, Clients};
+    false -> {reply, joined, lists:append(Clients,[Client])}
+end;
+channel(Clients, {exit, Client})->
+  case lists:member(Client,Clients) of
+    true -> {reply, exited, lists:delete(Client,Clients)};
+    false -> {reply, failed, Clients}
+end;
+channel(Clients, {message, Message, Nick, Channel, Client})-> 
+  case lists:member(Client,Clients) of 
+    true -> spawn(fun()->lists:foreach(
+      fun(Pid) ->
+        if Pid == Client -> skip;
+        true -> genserver:request(Pid, {message_receive, Nick, Message, Channel, Client})
+        end
+      end,
+    Clients) end),
+    {reply, ok, Clients};
+    false -> {reply, failed, Clients}
+end.
 
 % Stop the server process registered to the given name,
 % together with any other associated processes
