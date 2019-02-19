@@ -16,10 +16,15 @@ handle(S, {join, Ch, Client}) ->
   case lists:member(Ch, S) of
     true -> Result = genserver:request(list_to_atom(Ch), {join, Client}),
       case Result of
-        joined ->
-        failed ->
-  end,
+        joined -> {reply, joined, S};
+        failed -> {reply, failed, S}
+      end;
+    false -> genserver:start(list_to_atom(Ch), S, channel),
+      {reply, join
+  end;
   not_implemented.
+
+channel() ->
 
 handle(S, kill_channels) ->
   % Iterates (hopefully) through all channels registered to a server and
