@@ -13,6 +13,12 @@ start(ServerAtom) ->
     genserver:start(ServerAtom, [], fun handle/2).
 %
 handle(S, {join, Ch, Client}) ->
+  case lists:member(Ch, S) of
+    true -> Result = genserver:request(list_to_atom(Ch), {join, Client}),
+      case Result of
+        joined ->
+        failed ->
+  end,
   not_implemented.
 
 handle(S, kill_channels) ->
