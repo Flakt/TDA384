@@ -1,12 +1,10 @@
 -module(server).
 -export([start/1,stop/1]).
-
 -record(server, {server}).
 
 % Start a new server process with the given name
 % Do not change the signature of this function.
 start(ServerAtom) ->
-    % TODO Implement function
     % - Spawn a new process which waits for a message, handles it, then loops infinitely
     % - Register this process to ServerAtom
     % - Return the process ID
@@ -17,7 +15,7 @@ handle(S, {join, Ch, Client}) ->
     true -> Result = genserver:request(list_to_atom(Ch), {join, Client}),
       case Result of
         joined -> {reply, joined, S};
-        failed -> {reply, failed, S}
+        failed -> {reply, failedToJoin, S}
       end;
     false -> genserver:start(list_to_atom(Ch), S, channel),
       {reply, join, [Ch | S]}
