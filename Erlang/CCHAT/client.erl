@@ -32,13 +32,13 @@ initial_state(Nick, GUIAtom, ServerAtom) ->
 handle(St, {join, Channel}) ->
     % TODO: Implement this function
 case lists:member(Channel, channels) of
-    true -> 
+    true ->
     server ! (channels, {join, Channel, Client})
-    recieve {reply, Sucess, S} -> 
+    recieve {reply, Sucess, S} ->
         case Sucess of
             joined -> {reply, {ok, , "join not implemented"}, St};
             failed -> {reply, {error, , "join not implemented"}, St}
-        end; 
+        end;
     false -> {reply, {error, not_implemented, "join not implemented"}, St}
 end;
     % {reply, ok, St} ;
@@ -47,7 +47,7 @@ end;
 % Leave channel
 handle(St, {leave, Channel}) ->
     % TODO: Implement this function
-case Channel 
+case Channel
     % {reply, ok, St} ;
     {reply, {error, not_implemented, "leave not implemented"}, St} ;
 
@@ -55,7 +55,12 @@ case Channel
 handle(St, {message_send, Channel, Msg}) ->
     % TODO: Implement this function
     % {reply, ok, St} ;
-    {reply, {error, not_implemented, "message sending not implemented"}, St} ;
+    Result = genserver:request(list_to_atom(Channel), {message, Channel,
+    St#client_st.nick, Msg, self()}),
+    case Result of
+      ok -> {reply, ok, St};
+      failed -> {reply, {error, user_not_joined, "Not in the channel"} , St}
+    end;
 
 % ---------------------------------------------------------------------------
 % The cases below do not need to be changed...
