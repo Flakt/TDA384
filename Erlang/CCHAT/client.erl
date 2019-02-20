@@ -31,12 +31,23 @@ initial_state(Nick, GUIAtom, ServerAtom) ->
 % Join channel
 handle(St, {join, Channel}) ->
     % TODO: Implement this function
+case lists:member(Channel, channels) of
+    true -> 
+    server ! (channels, {join, Channel, Client})
+    recieve {reply, Sucess, S} -> 
+        case Sucess of
+            joined -> {reply, {ok, , "join not implemented"}, St};
+            failed -> {reply, {error, , "join not implemented"}, St}
+        end; 
+    false -> {reply, {error, not_implemented, "join not implemented"}, St}
+end;
     % {reply, ok, St} ;
-    {reply, {error, not_implemented, "join not implemented"}, St} ;
+    %{reply, {error, not_implemented, "join not implemented"}, St} ;
 
 % Leave channel
 handle(St, {leave, Channel}) ->
     % TODO: Implement this function
+case Channel 
     % {reply, ok, St} ;
     {reply, {error, not_implemented, "leave not implemented"}, St} ;
 
