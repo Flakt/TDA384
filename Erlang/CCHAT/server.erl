@@ -1,6 +1,9 @@
 -module(server).
 -export([start/1,stop/1]).
--record(server, {server}).
+-record(server, {
+    server,
+    channels
+}).
 
 % Start a new server process with the given name
 % Do not change the signature of this function.
@@ -10,21 +13,21 @@ start(ServerAtom) ->
     % - Return the process ID
     genserver:start(ServerAtom, [], fun handle/2).
 %
-handle(S, {join, Ch, Client}) ->
-  case lists:member(Ch, S) of
+handle({join, Ch, Client}) ->
+  case lists:member(Ch, channels) of
     true -> Result = genserver:request(list_to_atom(Ch), {join, Client}),
       case Result of
-        joined -> {reply, joined, S};
-        failed -> {reply, failedToJoin, S}
+        joined -> {reply, joined, channels};
+        failed -> {reply, failedToJoin, channels}
       end;
-    false -> genserver:start(list_to_atom(Ch), S, channel),
-      {reply, join, [Ch | S]}
+    false -> genserver:start(list_to_atom(Ch), channels, channel),
+      {reply, join, [Ch | channels]}
   end;
 
-handle(S, {leave, Ch, Client}) ->
+handle({leave, Ch, Client}) ->
   % Iterates (hopefully) through all channels registered to a server and
   % stops them
-  lists:foreach(fun(Ch) -> genserver:stop(list_to_atom(Ch)) end, S),
+  lists:foreach(fun(Ch) -> genserver:stop(list_to_atom(Ch)) end, channels),
   {reply,ok,[]}.
 
 channel(Clients, {join, Client})->

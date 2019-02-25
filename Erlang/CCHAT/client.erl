@@ -6,7 +6,7 @@
 -record(client_st, {
     gui, % atom of the GUI process
     nick, % nick/username of the client
-    server % atom of the chat server
+    server, % atom of the chat server
     channels % list of the client channels
 }).
 
@@ -32,14 +32,9 @@ initial_state(Nick, GUIAtom, ServerAtom) ->
 handle(St, {join, Channel}) ->
     % TODO: Implement this function
 case lists:member(Channel, channels) of
-    true ->
-    server ! (channels, {join, Channel, Client})
-    recieve {reply, Sucess, S} ->
-        case Sucess of
-            joined ->
-            {reply, ok, St#client_st{channels = [Channel | St#client_st.channels]}};
-            failed -> {reply, {error, user_already_joined , "Already joined channel"}, St}
-        end;
+    true -> genserver:request(list_to_atom(Channel), {join, self()}),
+    {reply, ok, St#client_st{channels =
+    lists:add(Channel, St#client_st.channels) }};
     false -> {reply, {error, server_unreachable, "server is not reachable"}, St}
 end;
     % {reply, ok, St} ;
@@ -49,7 +44,7 @@ end;
 handle(St, {leave, Channel}) ->
     % TODO: Implement this function
     case lists:member(Channel, St#client_st.channels) of
-      true -> genserver:request(list_to_atom(Ch), {leave, self()}),
+      true -> genserver:request(list_to_atom(channels), {leave, self()}),
         {reply, ok, St#client_st{channels =
          lists:delete(Channel, St#client_st.channels) }};
       false -> {reply, {error, user_not_joined, "User not in channel"}, St}
@@ -89,5 +84,5 @@ handle(St, quit) ->
     {reply, ok, St} ;
 
 % Catch-all for any unhandled requests
-handle(St, Data) ->
+handle(St, _Data) ->
     {reply, {error, not_implemented, "Client does not handle this command"}, St} .
