@@ -47,9 +47,12 @@ end;
 % Leave channel
 handle(St, {leave, Channel}) ->
     % TODO: Implement this function
-case Channel
-    % {reply, ok, St} ;
-    {reply, {error, not_implemented, "leave not implemented"}, St} ;
+    case lists:member(Channel, St#client_st.channels) of
+      true -> genserver:request(list_to_atom(Ch), {leave, self()}),
+        {reply, ok, St#client_st{channels =
+         lists:delete(Channel, St#client_st.channels) }};
+      false -> {reply, {error, user_not_joined, "User not in channel"}, St}
+    end;
 
 % Sending message (from GUI, to channel)
 handle(St, {message_send, Channel, Msg}) ->
