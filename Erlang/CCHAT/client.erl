@@ -7,7 +7,7 @@
     gui, % atom of the GUI process
     nick, % nick/username of the client
     server % atom of the chat server
-    channels % list of channels
+    channels % list of the client channels
 }).
 
 % Return an initial state record. This is called from GUI.
@@ -36,10 +36,11 @@ case lists:member(Channel, channels) of
     server ! (channels, {join, Channel, Client})
     recieve {reply, Sucess, S} ->
         case Sucess of
-            joined -> {reply, {ok, , "join not implemented"}, St};
-            failed -> {reply, {error, , "join not implemented"}, St}
+            joined ->
+            {reply, ok, St#client_st{channels = [Channel | St#client_st.channels]}};
+            failed -> {reply, {error, user_already_joined , "Already joined channel"}, St}
         end;
-    false -> {reply, {error, not_implemented, "join not implemented"}, St}
+    false -> {reply, {error, server_unreachable, "server is not reachable"}, St}
 end;
     % {reply, ok, St} ;
     %{reply, {error, not_implemented, "join not implemented"}, St} ;
