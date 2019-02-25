@@ -29,16 +29,24 @@ initial_state(Nick, GUIAtom, ServerAtom) ->
 %   - NewState is the updated state of the client
 
 % Join channel
-handle(St, {join, Channel}) ->
+%handle(St, {join, Channel}) ->
     % TODO: Implement this function
-case lists:member(Channel, channels) of
-    true -> genserver:request(list_to_atom(Channel), {join, self()}),
-    {reply, ok, St#client_st{channels =
-    lists:add(Channel, St#client_st.channels) }};
-    false -> {reply, {error, server_unreachable, "server is not reachable"}, St}
-end;
-    % {reply, ok, St} ;
-    %{reply, {error, not_implemented, "join not implemented"}, St} ;
+%    case lists:member(Channel, channels) of
+%      true -> genserver:request(list_to_atom(Channel), {join, self()}),
+%        {reply, ok, St#client_st{channels =
+%        lists:add(Channel, St#client_st.channels) }};
+%      false -> {reply, {error, server_unreachable, "server is not reachable"}, St}
+%    end;
+
+handle(St, {join, Channel}) ->
+  case lists:member(St#client_st.server, registered()) of
+    true -> Result = genserver:request(St#client_st.server, {join, Channel, self()}),
+      case Result of
+        joined -> {reply, ok, St#client_st{channels = lists:append(St#client_st.channels, [Channel])}};
+        failed -> {reply, {error, user_already_joined, "Already in channel"}, St}
+      end;
+    false -> {reply, {error, server_unreachable, "Server unreachable"}, St}
+  end;
 
 % Leave channel
 handle(St, {leave, Channel}) ->
