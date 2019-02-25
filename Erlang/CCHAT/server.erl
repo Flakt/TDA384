@@ -11,7 +11,7 @@ start(ServerAtom) ->
     % - Spawn a new process which waits for a message, handles it, then loops infinitely
     % - Register this process to ServerAtom
     % - Return the process ID
-    genserver:start(ServerAtom, [], fun handle/2).
+    genserver:start(ServerAtom, [], fun handle/1).
 %
 handle({join, Ch, Client}) ->
   case lists:member(Ch, channels) of
@@ -31,7 +31,7 @@ handle({leave, Ch, Client}) ->
   {reply,ok,[]}.
 
 channel(Clients, {join, Client})->
-  case lists:member(Client,Clients) of 
+  case lists:member(Client,Clients) of
     true -> {reply, failed, Clients};
     false -> {reply, joined, lists:append(Clients,[Client])}
 end;
@@ -40,8 +40,8 @@ channel(Clients, {exit, Client})->
     true -> {reply, exited, lists:delete(Client,Clients)};
     false -> {reply, failed, Clients}
 end;
-channel(Clients, {message, Message, Nick, Channel, Client})-> 
-  case lists:member(Client,Clients) of 
+channel(Clients, {message, Message, Nick, Channel, Client})->
+  case lists:member(Client,Clients) of
     true -> spawn(fun()->lists:foreach(
       fun(Pid) ->
         if Pid == Client -> skip;
