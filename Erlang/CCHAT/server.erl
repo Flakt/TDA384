@@ -7,23 +7,23 @@ start(ServerAtom) ->
     % - Spawn a new process which waits for a message, handles it, then loops infinitely
     % - Register this process to ServerAtom
     % - Return the process ID
-    genserver:start(ServerAtom, [], fun handle/2).
+    (catch genserver:start(ServerAtom, [], fun handle/2)).
 
 handle(St, {join, Ch, Client}) ->
   case lists:member(Ch, St) of
-    true -> Result = genserver:request(list_to_atom(Ch), {join, Client}),
+    true -> Result = (catch genserver:request(list_to_atom(Ch), {join, Client})),
       case Result of
         joined -> {reply, joined, St};
         failed -> {reply, failed, St}
       end;
-    false -> genserver:start(list_to_atom(Ch), [Client], fun channel/2),
-      {reply, join, lists:append(St, Ch)}
+    false -> (catch genserver:start(list_to_atom(Ch), [Client], fun channel/2)),
+      {reply, joined, lists:append(St, Ch)}
   end;
 
 handle(St, kill_channels) ->
   % Iterates (hopefully) through all channels registered to a server and
   % stops them
-  lists:foreach(fun(Ch) -> genserver:stop(list_to_atom(Ch)) end, St),
+  lists:foreach(fun(Ch) -> (catch genserver:stop(list_to_atom(Ch))) end, St),
   {reply,ok,[]}.
 
 channel(Clients, {join, Client})->
@@ -43,7 +43,7 @@ channel(Clients, {message, Channel, Nick, Msg, Client})->
     true -> spawn(fun()->lists:foreach(
       fun(Pid) ->
         if Pid == Client -> skip;
-        true -> genserver:request(Pid, {message_receive, Channel, Nick, Msg})
+        true -> (catch genserver:request(Pid, {message_receive, Channel, Nick, Msg}))
         end
       end,
     Clients) end),
@@ -56,5 +56,5 @@ channel(Clients, {message, Channel, Nick, Msg, Client})->
 stop(ServerAtom) ->
     % TODO Implement function
     % Return ok
-    genserver:request(ServerAtom, kill_channels),
-    genserver:stop(ServerAtom).
+    (catch genserver:request(ServerAtom, kill_channels)),
+    (catch genserver:stop(ServerAtom)).

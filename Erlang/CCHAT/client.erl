@@ -40,7 +40,7 @@ initial_state(Nick, GUIAtom, ServerAtom) ->
 
 handle(St, {join, Channel}) ->
   case lists:member(St#client_st.server, registered()) of
-    true -> Result = genserver:request(St#client_st.server, {join, Channel, self()}),
+    true -> Result = (catch genserver:request(St#client_st.server, {join, Channel, self()})),
       case Result of
         joined -> {reply, ok, St#client_st{channels = lists:append(St#client_st.channels, [Channel])}};
         failed -> {reply, {error, user_already_joined, "Already in channel"}, St}
@@ -52,7 +52,7 @@ handle(St, {join, Channel}) ->
 handle(St, {leave, Channel}) ->
     % TODO: Implement this function
     case lists:member(Channel, St#client_st.channels) of
-      true -> genserver:request(list_to_atom(channels), {leave, self()}),
+      true -> (catch genserver:request(list_to_atom(channels), {leave, self()})),
         {reply, ok, St#client_st{channels =
          lists:delete(Channel, St#client_st.channels) }};
       false -> {reply, {error, user_not_joined, "User not in channel"}, St}
@@ -62,8 +62,8 @@ handle(St, {leave, Channel}) ->
 handle(St, {message_send, Channel, Msg}) ->
     % TODO: Implement this function
     % {reply, ok, St} ;
-    Result = genserver:request(list_to_atom(Channel), {message, Channel,
-    St#client_st.nick, Msg, self()}),
+    Result = (catch genserver:request(list_to_atom(Channel), {message, Channel,
+    St#client_st.nick, Msg, self()})),
     case Result of
       ok -> {reply, ok, St};
       failed -> {reply, {error, user_not_joined, "Not in the channel"} , St}
