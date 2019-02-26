@@ -1,12 +1,25 @@
 -module(server).
 -export([start/1,stop/1]).
 
+-record(server_St, {
+    nicks % list of taken nicks
+}).
+
+initial_state() ->
+    #server_St{
+        nicks = []
+    }.
+
+% Return an initial state record. This is called from GUI.
+% Do not change the signature of this function.
+
 % Start a new server process with the given name
 % Do not change the signature of this function.
 start(ServerAtom) ->
     % - Spawn a new process which waits for a message, handles it, then loops infinitely
     % - Register this process to ServerAtom
     % - Return the process ID
+    initial_state(),
     (catch genserver:start(ServerAtom, [], fun handle/2)).
 
 % Handle function for the server
@@ -29,7 +42,16 @@ handle(St, {join, Ch, Client}) ->
 handle(St, kill_channels) ->
   % Iterates through all channels registered to a server and stops them
   lists:foreach(fun(Ch) -> genserver:stop(list_to_atom(Ch)) end, St),
-  {reply,ok,[]}.
+  {reply,ok,[]};
+
+handle(St, {change_nick, OldNick, NewNick}) ->
+  io:fwrite("im in"),
+  case lists:member(NewNick, St#server_St.nicks) of 
+    true -> io:fwrite("true"),
+      {reply, failed, St};
+    false -> io:fwrite("false"),
+      {reply, ok, St#server_St{nicks = [NewNick | lists:delete(OldNick, St#server_St.nicks)]}}
+end.
 
 % Handler function for channel processes
 % This pattern match handles requests for joining the channel

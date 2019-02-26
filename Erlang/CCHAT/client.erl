@@ -24,6 +24,7 @@ initial_state(Nick, GUIAtom, ServerAtom) ->
 handle(St, {join, Channel}) ->
   % Checks if server is active
   case lists:member(St#client_st.server, registered()) of
+    {'EXIT',_} -> {reply, {error, server_not_reached, "Server does not respond"}, St};
     % If server is active, tries to join the specified channel
     true -> Result = (catch genserver:request(St#client_st.server, {join, Channel, self()})),
       case Result of
@@ -38,6 +39,8 @@ handle(St, {join, Channel}) ->
 handle(St, {leave, Channel}) ->
     % Checks if client is in channel
     case lists:member(Channel, St#client_st.channels) of
+      {'EXIT',_} -> {reply, {error, server_not_reached, "Server does not respond"}, St};
+
       % If in channel, tries to leave
       true -> genserver:request(list_to_atom(Channel), {leave, self()}),
         {reply, ok, St#client_st{channels =
@@ -52,6 +55,7 @@ handle(St, {message_send, Channel, Msg}) ->
     Result = (catch genserver:request(list_to_atom(Channel), {message, Channel,
     St#client_st.nick, Msg, self()})),
     case Result of
+      {'EXIT',_} -> {reply, {error, server_not_reached, "Server does not respond"}, St};
       ok -> {reply, ok, St};
       failed -> {reply, {error, user_not_joined, "Not in the channel"} , St}
     end;
@@ -66,7 +70,12 @@ handle(St, whoami) ->
 
 % Change nick (no check, local only)
 handle(St, {nick, NewNick}) ->
-    {reply, ok, St#client_st{nick = NewNick}} ;
+  io:fwrite("im out"),
+  case (catch gen_server:request(St#client_st.server, {change_nick, St#client_st.nick, NewNick})) of
+    {'EXIT',_} -> {reply, {error, server_not_reached, "Server does not respond"}, St};
+    ok -> {reply, ok, St#client_st{nick = NewNick}} ;
+    failed -> {reply, error, nick_already_taken, "Nick is already in use"}
+  end;
 
 % Incoming message (from channel, to GUI)
 handle(St = #client_st{gui = GUI}, {message_receive, Channel, Nick, Msg}) ->
