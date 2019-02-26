@@ -17,7 +17,7 @@ handle(St, {join, Ch, Client}) ->
         failed -> {reply, failed, St}
       end;
     false -> (catch genserver:start(list_to_atom(Ch), [Client], fun channel/2)),
-      {reply, joined, lists:append(St, Ch)}
+      {reply, joined, [Ch | St]}
   end;
 
 handle(St, kill_channels) ->
@@ -29,7 +29,7 @@ handle(St, kill_channels) ->
 channel(Clients, {join, Client})->
   case lists:member(Client,Clients) of
     true -> {reply, failed, Clients};
-    false -> {reply, joined, lists:append(Clients,[Client])}
+    false -> {reply, joined, [Client | Clients]}
   end;
 
 channel(Clients, {leave, Client})->
