@@ -52,7 +52,7 @@ handle(St, {join, Channel}) ->
 handle(St, {leave, Channel}) ->
     % TODO: Implement this function
     case lists:member(Channel, St#client_st.channels) of
-      true -> (catch genserver:request(list_to_atom(channels), {leave, self()})),
+      true -> (catch genserver:request(list_to_atom(Channel), {leave, self()})),
         {reply, ok, St#client_st{channels =
          lists:delete(Channel, St#client_st.channels) }};
       false -> {reply, {error, user_not_joined, "User not in channel"}, St}
