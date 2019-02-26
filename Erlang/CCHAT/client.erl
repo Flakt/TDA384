@@ -39,10 +39,13 @@ initial_state(Nick, GUIAtom, ServerAtom) ->
 %    end;
 
 handle(St, {join, Channel}) ->
-    Result = (catch genserver:request(St#client_st.server, {join, Channel, self()})),
+  case lists:member(St#client_st.server, registered()) of
+    true -> Result = (catch genserver:request(St#client_st.server, {join, Channel, self()})),
       case Result of
         joined -> {reply, ok, St#client_st{channels = lists:append(St#client_st.channels, [Channel])}};
         failed -> {reply, {error, user_already_joined, "Already in channel"}, St}
+      end;
+    false -> {reply, {error, server_unreachable, "Server unreachable"}, St}
   end;
 
 % Leave channel
