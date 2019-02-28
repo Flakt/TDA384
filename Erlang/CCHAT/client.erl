@@ -40,7 +40,7 @@ handle(St, {leave, Channel}) ->
     % Checks if client is in channel
     case lists:member(Channel, St#client_st.channels) of
       % If in channel, tries to leave
-      true -> genserver:request(list_to_atom(Channel), {leave, self()}),
+      true -> (catch genserver:request(list_to_atom(Channel), {leave, self()})),
         {reply, ok, St#client_st{channels =
          lists:delete(Channel, St#client_st.channels) }};
       % If not in channel, returns error
