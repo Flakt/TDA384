@@ -19,8 +19,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
  */
 
 
-public class ForkJoinSolver
-    extends SequentialSolver
+public class ForkJoinSolver extends SequentialSolver
 {
     /**
      * Creates a solver that searches in <code>maze</code> from the
@@ -67,8 +66,53 @@ public class ForkJoinSolver
         return parallelSearch();
     }
 
-    private List<Integer> parallelSearch()
-    {
+    private List<Integer> parallelSearch(){
         return null;
     }
+
+
+    class PlayerThread implements Runnable {
+
+        @Override
+        public void run() {
+            int currentNode = start;
+            List<Integer> result = new ArrayList<>();
+            while(true){
+                result.add(currentNode);
+                if (visited.contains(start)){
+                    result = null;
+                    break;
+                }
+                else if (maze.hasGoal(start)){
+                    break;
+                }
+                else{
+                    List<Integer> neighbours = new ArrayList<>();
+
+                    for (int nb: maze.neighbors(currentNode)) {
+                        // if nb has not been already visited,
+                        // nb can be reached from current (i.e., current is nb's predecessor)
+                        if (!visited.contains(nb))
+                            neighbours.add(nb);
+                        predecessor.put(nb, currentNode);
+                    }
+                    if(neighbours.size() == 0){
+                        result = null;
+                        break;
+                    }
+                    else if(neighbours.size() == 1){
+                        currentNode = neighbours.get(0);
+                    }
+                    else{
+                        for (int node : neighbours){
+                            //spawn process for node
+
+                        }
+                    }
+                }
+                break;
+            }
+        }
+    }
 }
+
