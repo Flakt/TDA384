@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.ExecutionException;
 
 /**
  * <code>ForkJoinSolver</code> implements a solver for
@@ -21,6 +22,9 @@ import java.util.concurrent.ConcurrentSkipListSet;
 
 public class ForkJoinSolver extends SequentialSolver
 {
+
+    private List<ForkJoinSolver> childProcesses = new ArrayList<>();
+
     /**
      * Creates a solver that searches in <code>maze</code> from the
      * start node to a goal.
@@ -70,6 +74,45 @@ public class ForkJoinSolver extends SequentialSolver
         return null;
     }
 
+    /**
+     * Spawns a child process which starts at the given node
+     *
+     * @param currentNode the node to start on
+     */
+    private void spawnChildSolvers(int currentNode) {
+        ForkJoinSolver child = new ForkJoinSolver(maze);
+        childProcesses.add(child);
+        child.frontier.push(currentNode);
+        child.fork();
+    }
+
+    private List<Integer> joinChildren(int node) {
+        for (ForkJoinSolver child : childProcesses) {
+            List<Integer> results = null;
+            try {
+                results = child.get();
+            } catch (ExecutionException e) {
+                e.printStackTrace();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            if (results != null) {
+                return results;
+            }
+        }
+        return null;
+    }
+
+    private void checkNodeNeighbours(int node) {
+        Set<Integer> neighbours = maze.neighbors(node);
+
+        for (int neighbour : neighbours) {
+            if (!visited.contains(neighbour)) {
+                predecessor.put(neighbour, node);
+                frontier.push(neighbour);
+            }
+        }
+    }
 
     class PlayerThread implements Runnable {
 
