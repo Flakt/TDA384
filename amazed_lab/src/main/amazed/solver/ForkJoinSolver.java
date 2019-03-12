@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutionException;
 
@@ -50,6 +51,12 @@ public class ForkJoinSolver extends SequentialSolver {
         this.forkAfter = forkAfter;
     }
 
+    public ForkJoinSolver(Maze maze, int forkAfter, Set<Integer> visited ) {
+        this(maze);
+        this.forkAfter = forkAfter;
+        this.visited = visited;
+    }
+
     /**
      * Searches for and returns the path, as a list of node
      * identifiers, that goes from the start node to a goal node in
@@ -68,12 +75,12 @@ public class ForkJoinSolver extends SequentialSolver {
 
     private List<Integer> parallelSearch() {
 
-        int player = maze.newPlayer(start);
-        frontier.push(start);
-
+        if (frontier.empty()) {
+            frontier.push(start);
+        }
         while (!frontier.isEmpty()) {
-
             int currentNode = frontier.pop();
+            int player = maze.newPlayer(currentNode);
             maze.move(player, currentNode);
 
             if (maze.hasGoal(currentNode)) {
@@ -88,9 +95,6 @@ public class ForkJoinSolver extends SequentialSolver {
                    }
                    return joinChildren();
                 }
-                else if(frontier.size() == 0) {
-                    return null;
-                }
             }
         }
             return null;
@@ -102,7 +106,7 @@ public class ForkJoinSolver extends SequentialSolver {
          * @param currentNode the node to start on
          */
         private void spawnChildSolvers(int currentNode){
-            ForkJoinSolver child = new ForkJoinSolver(maze);
+            ForkJoinSolver child = new ForkJoinSolver(maze, forkAfter, visited);
             childProcesses.add(child);
             child.frontier.push(currentNode);
             child.fork();
