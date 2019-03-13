@@ -79,7 +79,7 @@ public class ForkJoinSolver extends SequentialSolver {
      * Steps through the maze, searching for the goal. Forks when presented with more than
      * one path.
      *
-     * @return a list containing the path from start to goal, or null if goal is not found
+     * @return a list containing the path from start to goal, or null if a goal was not found
      */
     private List<Integer> parallelSearch() {
 
@@ -117,10 +117,11 @@ public class ForkJoinSolver extends SequentialSolver {
          * @param currentNode the node to start on
          */
         private void spawnChildSolvers(int currentNode){
-            ForkJoinSolver child = new ForkJoinSolver(currentNode);
-            concurrentVisited.add(currentNode);
-            childProcesses.add(child);
-            child.fork();
+            if( concurrentVisited.add(currentNode)) {
+                ForkJoinSolver child = new ForkJoinSolver(currentNode);
+                childProcesses.add(child);
+                child.fork();
+            }
         }
 
     /**
