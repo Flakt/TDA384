@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * <code>ForkJoinSolver</code> implements a solver for
@@ -23,7 +24,9 @@ import java.util.concurrent.ExecutionException;
 
 public class ForkJoinSolver extends SequentialSolver {
 
+    static AtomicBoolean running = new AtomicBoolean(true);
     private List<ForkJoinSolver> childProcesses = new ArrayList<>();
+    
 
     /**
      * Creates a solver that searches in <code>maze</code> from the
@@ -80,7 +83,7 @@ public class ForkJoinSolver extends SequentialSolver {
             frontier.push(start);
         }
         int player = maze.newPlayer(start);
-        while (!frontier.isEmpty()) {
+        while (!frontier.isEmpty() && running.get()) {
             int currentNode = frontier.pop();
             maze.move(player, currentNode);
 
@@ -88,6 +91,7 @@ public class ForkJoinSolver extends SequentialSolver {
                 System.out.println("found result!!!!!!!!!!!");
                 List<Integer> res = pathFromTo(start, currentNode);
                 System.out.println(res);
+                running.set(false);
                 return res;
             } else {
                 visited.add(currentNode);
