@@ -25,8 +25,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class ForkJoinSolver extends SequentialSolver {
 
     static AtomicBoolean running = new AtomicBoolean(true);
+    static ConcurrentSkipListSet concurrentVisited = new ConcurrentSkipListSet();
     private List<ForkJoinSolver> childProcesses = new ArrayList<>();
-    
+
 
     /**
      * Creates a solver that searches in <code>maze</code> from the
@@ -54,10 +55,9 @@ public class ForkJoinSolver extends SequentialSolver {
         this.forkAfter = forkAfter;
     }
 
-    public ForkJoinSolver(Maze maze, int forkAfter, Set<Integer> visited,int start) {
+    public ForkJoinSolver(Maze maze, int forkAfter,int start) {
         this(maze);
         this.forkAfter = forkAfter;
-        this.visited = visited;
         this.start = start;
     }
 
@@ -94,7 +94,7 @@ public class ForkJoinSolver extends SequentialSolver {
                 running.set(false);
                 return res;
             } else {
-                visited.add(currentNode);
+                concurrentVisited.add(currentNode);
                 checkNodeNeighbours(currentNode);
                 if(frontier.size() > 1) {
                    while(!frontier.isEmpty()) {
@@ -114,7 +114,7 @@ public class ForkJoinSolver extends SequentialSolver {
          * @param currentNode the node to start on
          */
         private void spawnChildSolvers(int currentNode){
-            ForkJoinSolver child = new ForkJoinSolver(maze, forkAfter, visited, currentNode);
+            ForkJoinSolver child = new ForkJoinSolver(maze, forkAfter, currentNode);
             childProcesses.add(child);
             child.fork();
         }
@@ -137,7 +137,7 @@ public class ForkJoinSolver extends SequentialSolver {
             Set<Integer> neighbours = maze.neighbors(node);
 
             for (int neighbour : neighbours) {
-                if (!visited.contains(neighbour)) {
+                if (!concurrentVisited.contains(neighbour)) {
                     predecessor.put(neighbour, node);
                     frontier.push(neighbour);
                 }
