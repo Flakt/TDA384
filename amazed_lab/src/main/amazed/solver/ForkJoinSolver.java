@@ -24,8 +24,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ForkJoinSolver extends SequentialSolver {
 
-    static AtomicBoolean running = new AtomicBoolean(true);
-    static ConcurrentSkipListSet concurrentVisited = new ConcurrentSkipListSet();
+    static private AtomicBoolean running = new AtomicBoolean(true);
+    static private ConcurrentSkipListSet<Integer> concurrentVisited = new ConcurrentSkipListSet<>();
     private List<ForkJoinSolver> childProcesses = new ArrayList<>();
 
 
