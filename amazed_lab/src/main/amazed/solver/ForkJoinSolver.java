@@ -51,10 +51,11 @@ public class ForkJoinSolver extends SequentialSolver {
         this.forkAfter = forkAfter;
     }
 
-    public ForkJoinSolver(Maze maze, int forkAfter, Set<Integer> visited ) {
+    public ForkJoinSolver(Maze maze, int forkAfter, Set<Integer> visited,int start) {
         this(maze);
         this.forkAfter = forkAfter;
         this.visited = visited;
+        this.start = start;
     }
 
     /**
@@ -78,13 +79,16 @@ public class ForkJoinSolver extends SequentialSolver {
         if (frontier.empty()) {
             frontier.push(start);
         }
+        int player = maze.newPlayer(start);
         while (!frontier.isEmpty()) {
             int currentNode = frontier.pop();
-            int player = maze.newPlayer(currentNode);
             maze.move(player, currentNode);
 
             if (maze.hasGoal(currentNode)) {
-                return pathFromTo(start, currentNode);
+                System.out.println("found result!!!!!!!!!!!");
+                List<Integer> res = pathFromTo(start, currentNode);
+                System.out.println(res);
+                return res;
             } else {
                 visited.add(currentNode);
                 checkNodeNeighbours(currentNode);
@@ -93,7 +97,7 @@ public class ForkJoinSolver extends SequentialSolver {
                        int child = frontier.pop();
                        spawnChildSolvers(child);
                    }
-                   return joinChildren();
+                   return joinChildren(currentNode);
                 }
             }
         }
@@ -106,24 +110,20 @@ public class ForkJoinSolver extends SequentialSolver {
          * @param currentNode the node to start on
          */
         private void spawnChildSolvers(int currentNode){
-            ForkJoinSolver child = new ForkJoinSolver(maze, forkAfter, visited);
+            ForkJoinSolver child = new ForkJoinSolver(maze, forkAfter, visited, currentNode);
             childProcesses.add(child);
-            child.frontier.push(currentNode);
             child.fork();
         }
 
-        private List<Integer> joinChildren(){
+        private List<Integer> joinChildren(int current){
             for (ForkJoinSolver child : childProcesses) {
-                List<Integer> results = null;
-                try {
-                    results = child.get();
-                } catch (ExecutionException e) {
-                    e.printStackTrace();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                List<Integer> results;
+                    results = child.join();
                 if (results != null) {
-                    return results;
+                    System.out.println("result received!");
+                    List<Integer> list = pathFromTo(start, current);
+                    list.addAll(results);
+                    return list;
                 }
             }
             return null;
