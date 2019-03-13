@@ -4,12 +4,8 @@ import amazed.maze.Maze;
 
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Map;
-import java.util.HashMap;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -78,6 +74,12 @@ public class ForkJoinSolver extends SequentialSolver {
         return parallelSearch();
     }
 
+    /**
+     * Steps through the maze, searching for the goal. Forks when presented with more than
+     * one path.
+     *
+     * @return a list containing the path from start to goal, or null if goal is not found
+     */
     private List<Integer> parallelSearch() {
 
         if (frontier.empty()) {
@@ -89,11 +91,8 @@ public class ForkJoinSolver extends SequentialSolver {
             if (!concurrentVisited.contains(currentNode)) {
                 maze.move(player, currentNode);
             }
-
             if (maze.hasGoal(currentNode)) {
-                System.out.println("found result!!!!!!!!!!!");
                 List<Integer> res = pathFromTo(start, currentNode);
-                System.out.println(res);
                 running.set(false);
                 return res;
             } else {
@@ -101,8 +100,8 @@ public class ForkJoinSolver extends SequentialSolver {
                 checkNodeNeighbours(currentNode);
                 if(frontier.size() > 1) {
                    while(!frontier.isEmpty()) {
-                       int child = frontier.pop();
-                       spawnChildSolvers(child);
+                       int neighbour = frontier.pop();
+                       spawnChildSolvers(neighbour);
                    }
                    return joinChildren(currentNode);
                 }
@@ -123,29 +122,38 @@ public class ForkJoinSolver extends SequentialSolver {
             child.fork();
         }
 
-        private List<Integer> joinChildren(int current){
+    /**
+     * Joins all child processes that were created by this process
+     *
+     * @param current the current node of the process
+     * @return a path from goal to node current or null if goal was not found
+     */
+    private List<Integer> joinChildren(int current){
             for (ForkJoinSolver child : childProcesses) {
                 List<Integer> results;
                     results = child.join();
                 if (results != null) {
-                    System.out.println("result received!");
-                    List<Integer> list = pathFromTo(start, current);
-                    list.addAll(results);
-                    return list;
+                    List<Integer> concatResult = pathFromTo(start, current);
+                    concatResult.addAll(results);
+                    return concatResult;
                 }
             }
             return null;
-        }
+    }
 
-        private void checkNodeNeighbours( int node){
-            Set<Integer> neighbours = maze.neighbors(node);
-
-            for (int neighbour : neighbours) {
-                if (!concurrentVisited.contains(neighbour)) {
-                    predecessor.put(neighbour, node);
-                    frontier.push(neighbour);
-                }
+    /**
+     * Pushes all neighbours of a node to frontier and predecessor
+     *
+     * @param node the node to check the neighbours on
+     */
+    private void checkNodeNeighbours( int node){
+        Set<Integer> neighbours = maze.neighbors(node);
+        for (int neighbour : neighbours) {
+            if (!concurrentVisited.contains(neighbour)) {
+                predecessor.put(neighbour, node);
+                frontier.push(neighbour);
             }
         }
     }
+}
 
