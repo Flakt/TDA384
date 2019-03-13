@@ -22,6 +22,7 @@ public class ForkJoinSolver extends SequentialSolver {
 
     static private AtomicBoolean running = new AtomicBoolean(true);
     static private ConcurrentSkipListSet<Integer> concurrentVisited = new ConcurrentSkipListSet<>();
+    static private Maze staticMaze;
     private List<ForkJoinSolver> childProcesses = new ArrayList<>();
 
 
@@ -49,12 +50,12 @@ public class ForkJoinSolver extends SequentialSolver {
      */
     public ForkJoinSolver(Maze maze, int forkAfter) {
         this(maze);
+        staticMaze = maze;
         this.forkAfter = forkAfter;
     }
 
-    public ForkJoinSolver(Maze maze, int forkAfter,int start) {
-        this(maze);
-        this.forkAfter = forkAfter;
+    public ForkJoinSolver(int start) {
+        this(staticMaze);
         this.start = start;
     }
 
@@ -85,13 +86,13 @@ public class ForkJoinSolver extends SequentialSolver {
         if (frontier.empty()) {
             frontier.push(start);
         }
-        int player = maze.newPlayer(start);
+        int player = staticMaze.newPlayer(start);
         while (!frontier.isEmpty() && running.get()) {
             int currentNode = frontier.pop();
             if (!concurrentVisited.contains(currentNode)) {
-                maze.move(player, currentNode);
+                staticMaze.move(player, currentNode);
             }
-            if (maze.hasGoal(currentNode)) {
+            if (staticMaze.hasGoal(currentNode)) {
                 List<Integer> res = pathFromTo(start, currentNode);
                 running.set(false);
                 return res;
@@ -116,7 +117,7 @@ public class ForkJoinSolver extends SequentialSolver {
          * @param currentNode the node to start on
          */
         private void spawnChildSolvers(int currentNode){
-            ForkJoinSolver child = new ForkJoinSolver(maze, forkAfter, currentNode);
+            ForkJoinSolver child = new ForkJoinSolver(currentNode);
             concurrentVisited.add(currentNode);
             childProcesses.add(child);
             child.fork();
@@ -147,7 +148,7 @@ public class ForkJoinSolver extends SequentialSolver {
      * @param node the node to check the neighbours on
      */
     private void checkNodeNeighbours( int node){
-        Set<Integer> neighbours = maze.neighbors(node);
+        Set<Integer> neighbours = staticMaze.neighbors(node);
         for (int neighbour : neighbours) {
             if (!concurrentVisited.contains(neighbour)) {
                 predecessor.put(neighbour, node);
