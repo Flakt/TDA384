@@ -29,6 +29,7 @@ public class ForkJoinSolver extends SequentialSolver {
     private List<ForkJoinSolver> childProcesses = new ArrayList<>();
 
 
+
     /**
      * Creates a solver that searches in <code>maze</code> from the
      * start node to a goal.
@@ -85,7 +86,9 @@ public class ForkJoinSolver extends SequentialSolver {
         int player = maze.newPlayer(start);
         while (!frontier.isEmpty() && running.get()) {
             int currentNode = frontier.pop();
-            maze.move(player, currentNode);
+            if (!concurrentVisited.contains(currentNode)) {
+                maze.move(player, currentNode);
+            }
 
             if (maze.hasGoal(currentNode)) {
                 System.out.println("found result!!!!!!!!!!!");
@@ -115,6 +118,7 @@ public class ForkJoinSolver extends SequentialSolver {
          */
         private void spawnChildSolvers(int currentNode){
             ForkJoinSolver child = new ForkJoinSolver(maze, forkAfter, currentNode);
+            concurrentVisited.add(currentNode);
             childProcesses.add(child);
             child.fork();
         }
