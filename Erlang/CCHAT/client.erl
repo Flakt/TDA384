@@ -6,7 +6,8 @@
 -record(client_st, {
     gui, % atom of the GUI process
     nick, % nick/username of the client
-    server % atom of the chat server
+    server, % atom of the chat server
+    channels % list of the client channels
 }).
 
 % Return an initial state record. This is called from GUI.
@@ -15,34 +16,47 @@ initial_state(Nick, GUIAtom, ServerAtom) ->
     #client_st{
         gui = GUIAtom,
         nick = Nick,
-        server = ServerAtom
+        server = ServerAtom,
+        channels = []
     }.
 
-% handle/2 handles each kind of request from GUI
-% Parameters:
-%   - the current state of the client (St)
-%   - request data from GUI
-% Must return a tuple {reply, Data, NewState}, where:
-%   - Data is what is sent to GUI, either the atom `ok` or a tuple {error, Atom, "Error message"}
-%   - NewState is the updated state of the client
-
-% Join channel
+% Join Channel
 handle(St, {join, Channel}) ->
-    % TODO: Implement this function
-    % {reply, ok, St} ;
-    {reply, {error, not_implemented, "join not implemented"}, St} ;
+  % Checks if server is active
+  case lists:member(St#client_st.server, registered()) of
+    % If server is active, tries to join the specified channel
+    true -> Result = (catch genserver:request(St#client_st.server, {join, Channel, self()})),
+      case Result of
+        {'EXIT',_} -> {reply, {error, server_not_reached, "Server does not respond"}, St};
+        joined -> {reply, ok, St#client_st{channels = lists:append(St#client_st.channels, [Channel])}};
+        failed -> {reply, {error, user_already_joined, "Already in channel"}, St}
+      end;
+    % Server is not active, return error
+    false -> {reply, {error, server_not_reached, "Server unreachable"}, St}
+  end;
 
 % Leave channel
 handle(St, {leave, Channel}) ->
-    % TODO: Implement this function
-    % {reply, ok, St} ;
-    {reply, {error, not_implemented, "leave not implemented"}, St} ;
+    % Checks if client is in channel
+    case lists:member(Channel, St#client_st.channels) of
+      % If in channel, tries to leave
+      true -> (catch genserver:request(list_to_atom(Channel), {leave, self()})),
+        {reply, ok, St#client_st{channels =
+         lists:delete(Channel, St#client_st.channels) }};
+      % If not in channel, returns error
+      false -> {reply, {error, user_not_joined, "User not in channel"}, St}
+    end;
 
 % Sending message (from GUI, to channel)
 handle(St, {message_send, Channel, Msg}) ->
-    % TODO: Implement this function
-    % {reply, ok, St} ;
-    {reply, {error, not_implemented, "message sending not implemented"}, St} ;
+    % Sends request to genserver for messaging all clients in Channel
+    Result = (catch genserver:request(list_to_atom(Channel), {message, Channel,
+    St#client_st.nick, Msg, self()})),
+    case Result of
+      {'EXIT',_} -> {reply, {error, server_not_reached, "Server does not respond"}, St};
+      ok -> {reply, ok, St};
+      failed -> {reply, {error, user_not_joined, "Not in the channel"} , St}
+    end;
 
 % ---------------------------------------------------------------------------
 % The cases below do not need to be changed...
@@ -67,5 +81,5 @@ handle(St, quit) ->
     {reply, ok, St} ;
 
 % Catch-all for any unhandled requests
-handle(St, Data) ->
+handle(St, _Data) ->
     {reply, {error, not_implemented, "Client does not handle this command"}, St} .
